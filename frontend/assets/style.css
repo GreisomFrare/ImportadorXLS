@@ -1,0 +1,59 @@
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bs-body-bg);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-zone {
+  border: 2px dashed var(--bs-border-color);
+  border-radius: 0.5rem;
+  padding: 2.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--bs-primary);
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+.drop-zone i {
+  font-size: 2.5rem;
+  color: var(--bs-secondary-color);
+}
+
+.table-preview-wrapper {
+  max-height: 380px;
+  overflow: auto;
+}
+
+.table-preview-wrapper table {
+  font-size: 0.82rem;
+}
+
+.mapping-grid th,
+.mapping-grid td {
+  vertical-align: middle;
+  font-size: 0.85rem;
+}
+
+.nav-tabs .nav-link {
+  color: var(--bs-body-color);
+}
+
+.badge-nullable {
+  font-size: 0.7rem;
+}
+
+#toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 11000;
+}

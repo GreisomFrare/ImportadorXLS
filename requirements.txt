@@ -1,0 +1,11 @@
+Flask==3.0.3
+flask-cors==4.0.1
+python-dotenv==1.0.1
+requests==2.31.0
+oracledb==2.3.0
+waitress==3.0.1
+pywin32
+openpyxl==3.1.2
+xlrd==2.0.1
+charset_normalizer
+chardet

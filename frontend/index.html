@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importador XLS — Viasoft</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/assets/style.css">
+  <script>
+    (function () {
+      const t = localStorage.getItem('viasoft-theme') || 'dark';
+      document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+  </script>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="text-center">
+      <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+      <p class="mt-3 text-muted fw-semibold">Verificando acesso...</p>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg px-3" style="background-color:#1a1a2e;">
+    <span class="navbar-brand text-white fw-bold">
+      <i class="bi bi-file-earmark-spreadsheet me-2"></i>Importador XLS
+    </span>
+    <div class="ms-auto">
+      <button class="btn btn-sm btn-outline-secondary" onclick="alternarTema()">
+        <i id="btn-tema-icon" class="bi bi-moon-stars-fill"></i>
+      </button>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-3">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="mainTabs">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-importacao">
+          <i class="bi bi-upload me-1"></i>Importação
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-depara">
+          <i class="bi bi-arrow-left-right me-1"></i>De Para
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-config">
+          <i class="bi bi-gear me-1"></i>Configuração
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- ═══════════════════════════════════════════════════
+           TAB 1 — IMPORTAÇÃO
+      ══════════════════════════════════════════════════════ -->
+      <div class="tab-pane fade show active" id="tab-importacao">
+        <div class="row g-3">
+          <!-- Seleção de layout -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+                <label class="fw-semibold mb-0">Layout:</label>
+                <select id="imp-layout-sel" class="form-select" style="max-width:320px;">
+                  <option value="">— selecione um layout —</option>
+                </select>
+                <span id="imp-layout-info" class="text-muted small"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drop zone -->
+          <div class="col-12">
+            <div class="drop-zone" id="drop-zone"
+                 onclick="document.getElementById('imp-arquivo').click()">
+              <i class="bi bi-cloud-upload d-block mb-2"></i>
+              <div class="fw-semibold">Clique ou arraste o arquivo aqui</div>
+              <div class="text-muted small mt-1">Formatos aceitos: .xlsx, .xls, .csv</div>
+              <div id="drop-file-name" class="text-primary mt-2 fw-semibold"></div>
+            </div>
+            <input type="file" id="imp-arquivo" class="d-none"
+                   accept=".xlsx,.xls,.csv">
+          </div>
+
+          <!-- Botões ação -->
+          <div class="col-12 d-flex gap-2">
+            <button class="btn btn-outline-secondary" id="btn-preview"
+                    onclick="carregarPreview()" disabled>
+              <i class="bi bi-eye me-1"></i>Pré-visualizar
+            </button>
+            <button class="btn btn-primary" id="btn-importar"
+                    onclick="executarImportacao()" disabled>
+              <i class="bi bi-cloud-upload me-1"></i>Importar
+            </button>
+          </div>
+
+          <!-- Preview table -->
+          <div class="col-12" id="preview-container" style="display:none;">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-table me-1"></i>Pré-visualização
+                  <span id="preview-count" class="badge bg-secondary ms-2"></span>
+                </span>
+                <span class="text-muted small" id="preview-depara-info"></span>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-preview-wrapper">
+                  <table class="table table-sm table-bordered table-hover mb-0">
+                    <thead class="table-dark sticky-top" id="preview-thead"></thead>
+                    <tbody id="preview-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resultado importação -->
+          <div class="col-12" id="resultado-container" style="display:none;">
+            <div class="card" id="resultado-card">
+              <div class="card-header"><i class="bi bi-check2-circle me-1"></i>Resultado</div>
+              <div class="card-body" id="resultado-body"></div>
+            </div>
+          </div>
+
+          <!-- Histórico -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between">
+                <span><i class="bi bi-clock-history me-1"></i>Histórico de importações</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="carregarHistorico()">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-preview-wrapper">
+                  <table class="table table-sm table-hover mb-0">
+                    <thead class="table-dark">
+                      <tr>
+                        <th>Data</th><th>Layout</th><th>Arquivo</th>
+                        <th>Total</th><th>Importadas</th><th>Erros</th><th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="historico-tbody">
+                      <tr><td colspan="7" class="text-center text-muted">Carregando...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════
+           TAB 2 — DE PARA
+      ══════════════════════════════════════════════════════ -->
+      <div class="tab-pane fade" id="tab-depara">
+        <div class="row g-3">
+
+          <!-- Seleção / criação de layout -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+                <label class="fw-semibold mb-0">Layout:</label>
+                <select id="dp-layout-sel" class="form-select" style="max-width:280px;"
+                        onchange="selecionarLayoutDepara(this.value)">
+                  <option value="">— selecione ou crie novo —</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="novoLayout()">
+                  <i class="bi bi-plus-lg me-1"></i>Novo
+                </button>
+                <button class="btn btn-danger btn-sm" id="btn-excluir-layout" style="display:none;"
+                        onclick="excluirLayout()">
+                  <i class="bi bi-trash me-1"></i>Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulário do layout -->
+          <div class="col-12" id="dp-form-container" style="display:none;">
+            <div class="card">
+              <div class="card-header fw-semibold">Configuração do Layout</div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">Nome do Layout *</label>
+                    <input type="text" id="dp-nome" class="form-control" placeholder="Ex.: Planilha Fornecedor A">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Tabela Oracle *</label>
+                    <div class="input-group">
+                      <input type="text" id="dp-tabela" class="form-control"
+                             placeholder="SCHEMA.TABELA">
+                      <button class="btn btn-outline-secondary" onclick="carregarColunasOracle()">
+                        <i class="bi bi-search"></i>
+                      </button>
+                    </div>
+                    <div class="form-text">Ex.: VIASOFT.MINHA_TABELA</div>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Linha de início *</label>
+                    <input type="number" id="dp-linha-inicio" class="form-control" value="2" min="1">
+                    <div class="form-text">Linha 1 = sem cabeçalho</div>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Tipo de arquivo *</label>
+                    <select id="dp-tipo-arquivo" class="form-select" onchange="alterarTipoArquivo()">
+                      <option value="xlsx">Excel (.xlsx)</option>
+                      <option value="xls">Excel Legado (.xls)</option>
+                      <option value="csv">CSV (.csv)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2" id="dp-sep-container" style="display:none;">
+                    <label class="form-label">Separador CSV</label>
+                    <select id="dp-separador" class="form-select">
+                      <option value=",">Vírgula (,)</option>
+                      <option value=";">Ponto e vírgula (;)</option>
+                      <option value="&#9;">Tab</option>
+                      <option value="|">Pipe (|)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Upload de arquivo de referência para colunas -->
+                <div class="mt-3 p-3 rounded" style="background:rgba(255,255,255,0.03); border:1px solid var(--bs-border-color);">
+                  <div class="fw-semibold small mb-2">
+                    <i class="bi bi-file-earmark-arrow-up me-1"></i>
+                    Arquivo de referência (para identificar colunas da planilha)
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="file" id="dp-arquivo-ref" class="form-control form-control-sm"
+                           style="max-width:340px;" accept=".xlsx,.xls,.csv">
+                    <button class="btn btn-sm btn-outline-primary" onclick="carregarColunasArquivo()">
+                      <i class="bi bi-lightning me-1"></i>Carregar colunas
+                    </button>
+                    <span id="dp-cols-info" class="text-muted small"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grade de mapeamento -->
+          <div class="col-12" id="dp-mapping-container" style="display:none;">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-arrow-left-right me-1"></i>Mapeamento De Para</span>
+                <button class="btn btn-sm btn-primary" onclick="salvarLayout()">
+                  <i class="bi bi-floppy me-1"></i>Salvar Layout
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-preview-wrapper">
+                  <table class="table table-sm table-bordered mapping-grid mb-0">
+                    <thead class="table-dark sticky-top">
+                      <tr>
+                        <th style="width:30%">Campo Oracle</th>
+                        <th style="width:12%">Tipo</th>
+                        <th style="width:12%">Nulo?</th>
+                        <th>Coluna Planilha / Valor Fixo</th>
+                      </tr>
+                    </thead>
+                    <tbody id="mapping-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════
+           TAB 3 — CONFIGURAÇÃO
+      ══════════════════════════════════════════════════════ -->
+      <div class="tab-pane fade" id="tab-config">
+        <div class="row g-3 justify-content-center">
+          <div class="col-lg-7">
+            <div class="card">
+              <div class="card-header fw-semibold">
+                <i class="bi bi-database me-1"></i>Conexão Oracle
+              </div>
+              <div class="card-body">
+                <!-- Modo -->
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Modo de conexão</label>
+                  <div class="d-flex gap-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="modo-conexao"
+                             id="modo-direto" value="DIRETO" checked
+                             onchange="alterarModoConexao()">
+                      <label class="form-check-label" for="modo-direto">
+                        Direto (thin client)
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="modo-conexao"
+                             id="modo-tns" value="TNS"
+                             onchange="alterarModoConexao()">
+                      <label class="form-check-label" for="modo-tns">
+                        TNS (thick client)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Credenciais comuns -->
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Usuário Oracle</label>
+                    <input type="text" id="cfg-usuario" class="form-control">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Senha</label>
+                    <input type="password" id="cfg-senha" class="form-control">
+                  </div>
+                </div>
+
+                <!-- Campos DIRETO -->
+                <div id="campos-direto">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label">Host / IP</label>
+                      <input type="text" id="cfg-host" class="form-control" placeholder="192.168.1.100">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label">Porta</label>
+                      <input type="number" id="cfg-porta" class="form-control" value="1521">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">SID</label>
+                      <input type="text" id="cfg-sid" class="form-control" placeholder="ORCL">
+                    </div>
+                    <div class="col-md-12">
+                      <label class="form-label">Service Name <span class="text-muted small">(alternativa ao SID)</span></label>
+                      <input type="text" id="cfg-service-name" class="form-control" placeholder="orcl.dominio.com">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Campos TNS -->
+                <div id="campos-tns" style="display:none;">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label">Alias TNS</label>
+                      <input type="text" id="cfg-tns-alias" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Caminho TNSNAMES.ORA</label>
+                      <input type="text" id="cfg-tnsnames-path" class="form-control"
+                             placeholder="C:\oracle\network\admin">
+                    </div>
+                    <div class="col-md-12">
+                      <label class="form-label">Oracle Client BIN</label>
+                      <input type="text" id="cfg-oracle-client-bin" class="form-control"
+                             placeholder="C:\oracle\bin">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Porta do servidor -->
+                <hr>
+                <div class="row g-2 mb-3">
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Porta do serviço web</label>
+                    <input type="number" id="cfg-server-porta" class="form-control" value="5000">
+                  </div>
+                </div>
+
+                <!-- Botões -->
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary" onclick="testarConexao()">
+                    <i class="bi bi-plug me-1"></i>Testar Conexão
+                  </button>
+                  <button class="btn btn-primary" onclick="salvarConfig()">
+                    <i class="bi bi-floppy me-1"></i>Salvar
+                  </button>
+                </div>
+                <div id="cfg-resultado" class="mt-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/app.js"></script>
+  <script>
+    // ═══════════════════════════════════════════════════════════
+    // Estado global
+    // ═══════════════════════════════════════════════════════════
+    let layouts = [];
+    let layoutAtualDp = null;    // layout em edição no De Para
+    let colunasOracle = [];
+    let colunasArquivo = [];
+    let arquivoSelecionado = null;
+
+    // ═══════════════════════════════════════════════════════════
+    // Init
+    // ═══════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Aplicar ícone de tema correto
+      const tema = localStorage.getItem('viasoft-theme') || 'dark';
+      document.getElementById('btn-tema-icon').className =
+        tema === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+
+      await verificarAcesso();
+      await carregarLayouts();
+      await carregarHistorico();
+      carregarConfig();
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // Layouts
+    // ═══════════════════════════════════════════════════════════
+    async function carregarLayouts() {
+      const r = await fetch('/api/layouts/');
+      layouts = await r.json();
+
+      const selImp = document.getElementById('imp-layout-sel');
+      const selDp  = document.getElementById('dp-layout-sel');
+
+      [selImp, selDp].forEach(sel => {
+        const val = sel.value;
+        while (sel.options.length > 1) sel.remove(1);
+        layouts.forEach(l => {
+          const opt = new Option(`${l.nome} (${l.tipo_arquivo.toUpperCase()})`, l.id);
+          sel.add(opt);
+        });
+        sel.value = val;
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TAB 1 — IMPORTAÇÃO
+    // ═══════════════════════════════════════════════════════════
+    const dropZone = document.getElementById('drop-zone');
+    const impArquivo = document.getElementById('imp-arquivo');
+
+    impArquivo.addEventListener('change', () => {
+      arquivoSelecionado = impArquivo.files[0] || null;
+      atualizarEstadoImportacao();
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      arquivoSelecionado = e.dataTransfer.files[0] || null;
+      atualizarEstadoImportacao();
+    });
+
+    document.getElementById('imp-layout-sel').addEventListener('change', function() {
+      const l = layouts.find(x => x.id == this.value);
+      if (l) {
+        document.getElementById('imp-layout-info').textContent =
+          `Tabela: ${l.tabela_oracle} | Início na linha ${l.linha_inicio}`;
+      } else {
+        document.getElementById('imp-layout-info').textContent = '';
+      }
+      atualizarEstadoImportacao();
+    });
+
+    function atualizarEstadoImportacao() {
+      const temLayout = !!document.getElementById('imp-layout-sel').value;
+      const temArquivo = !!arquivoSelecionado;
+      document.getElementById('btn-preview').disabled = !(temLayout && temArquivo);
+      document.getElementById('btn-importar').disabled = !(temLayout && temArquivo);
+      if (arquivoSelecionado) {
+        document.getElementById('drop-file-name').textContent = arquivoSelecionado.name;
+      } else {
+        document.getElementById('drop-file-name').textContent = '';
+      }
+    }
+
+    async function carregarPreview() {
+      const layoutId = document.getElementById('imp-layout-sel').value;
+      if (!layoutId || !arquivoSelecionado) return;
+
+      const fd = new FormData();
+      fd.append('layout_id', layoutId);
+      fd.append('arquivo', arquivoSelecionado);
+
+      document.getElementById('preview-container').style.display = 'none';
+      try {
+        const r = await fetch('/api/import/preview', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.erro) { toast(d.erro, 'danger'); return; }
+
+        renderizarPreview(d);
+      } catch (e) {
+        toast('Erro ao carregar pré-visualização', 'danger');
+      }
+    }
+
+    function renderizarPreview(d) {
+      const thead = document.getElementById('preview-thead');
+      const tbody = document.getElementById('preview-tbody');
+      document.getElementById('preview-count').textContent = `${d.total} linhas`;
+
+      // Cabeçalho
+      const colunas = d.cabecalho.length > 0
+        ? d.cabecalho.map((h, i) => h || indicePraLetra(i))
+        : (d.amostra[0] || []).map((_, i) => indicePraLetra(i));
+
+      thead.innerHTML = '<tr>' + colunas.map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+      // Linhas
+      tbody.innerHTML = d.amostra.map(row =>
+        '<tr>' + row.map(c => `<td>${c ?? ''}</td>`).join('') + '</tr>'
+      ).join('');
+
+      // Info De Para
+      if (d.campos && d.campos.length > 0) {
+        document.getElementById('preview-depara-info').textContent =
+          `${d.campos.length} campo(s) mapeado(s) → ${d.layout.tabela_oracle}`;
+      }
+
+      document.getElementById('preview-container').style.display = '';
+    }
+
+    async function executarImportacao() {
+      const layoutId = document.getElementById('imp-layout-sel').value;
+      if (!layoutId || !arquivoSelecionado) return;
+
+      if (!confirm('Confirma a importação dos dados para o banco Oracle?')) return;
+
+      const fd = new FormData();
+      fd.append('layout_id', layoutId);
+      fd.append('arquivo', arquivoSelecionado);
+
+      document.getElementById('btn-importar').disabled = true;
+      document.getElementById('btn-importar').innerHTML =
+        '<span class="spinner-border spinner-border-sm me-1"></span>Importando...';
+
+      try {
+        const r = await fetch('/api/import/executar', { method: 'POST', body: fd });
+        const d = await r.json();
+
+        document.getElementById('resultado-container').style.display = '';
+        if (d.ok) {
+          const temErros = d.erros > 0;
+          document.getElementById('resultado-card').className =
+            `card border-${temErros ? 'warning' : 'success'}`;
+          let html = `
+            <div class="row text-center g-2 mb-3">
+              <div class="col"><div class="fw-bold fs-4">${d.total}</div><div class="text-muted small">Total</div></div>
+              <div class="col"><div class="fw-bold fs-4 text-success">${d.importadas}</div><div class="text-muted small">Importadas</div></div>
+              <div class="col"><div class="fw-bold fs-4 text-${d.erros > 0 ? 'danger' : 'muted'}">${d.erros}</div><div class="text-muted small">Erros</div></div>
+            </div>`;
+          if (d.log && d.log.length > 0) {
+            html += `<div class="alert alert-warning"><strong>Erros detalhados:</strong><pre class="mb-0 mt-1 small">${d.log.join('\n')}</pre></div>`;
+          }
+          document.getElementById('resultado-body').innerHTML = html;
+          toast(`Importação concluída: ${d.importadas} linha(s) inserida(s)`, temErros ? 'warning' : 'success');
+        } else {
+          document.getElementById('resultado-card').className = 'card border-danger';
+          document.getElementById('resultado-body').innerHTML =
+            `<div class="alert alert-danger mb-0">${d.erro}</div>`;
+          toast(d.erro, 'danger');
+        }
+        await carregarHistorico();
+      } catch (e) {
+        toast('Erro ao executar importação', 'danger');
+      } finally {
+        document.getElementById('btn-importar').disabled = false;
+        document.getElementById('btn-importar').innerHTML =
+          '<i class="bi bi-cloud-upload me-1"></i>Importar';
+      }
+    }
+
+    async function carregarHistorico() {
+      const r = await fetch('/api/import/historico');
+      const rows = await r.json();
+      const tbody = document.getElementById('historico-tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma importação registrada</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td class="text-nowrap">${formatarData(r.created_at)}</td>
+          <td>${r.nome_layout || '-'}</td>
+          <td class="text-truncate" style="max-width:200px;" title="${r.nome_arquivo}">${r.nome_arquivo || '-'}</td>
+          <td class="text-center">${r.total_linhas}</td>
+          <td class="text-center text-success fw-semibold">${r.linhas_importadas}</td>
+          <td class="text-center ${r.linhas_erro > 0 ? 'text-danger fw-semibold' : ''}">${r.linhas_erro}</td>
+          <td><span class="badge bg-${r.status === 'concluido' ? 'success' : 'secondary'}">${r.status}</span></td>
+        </tr>`).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TAB 2 — DE PARA
+    // ═══════════════════════════════════════════════════════════
+    function novoLayout() {
+      layoutAtualDp = null;
+      colunasOracle = [];
+      colunasArquivo = [];
+      document.getElementById('dp-layout-sel').value = '';
+      document.getElementById('dp-nome').value = '';
+      document.getElementById('dp-tabela').value = '';
+      document.getElementById('dp-linha-inicio').value = '2';
+      document.getElementById('dp-tipo-arquivo').value = 'xlsx';
+      document.getElementById('dp-separador').value = ',';
+      document.getElementById('dp-sep-container').style.display = 'none';
+      document.getElementById('dp-cols-info').textContent = '';
+      document.getElementById('dp-arquivo-ref').value = '';
+      document.getElementById('mapping-tbody').innerHTML = '';
+      document.getElementById('btn-excluir-layout').style.display = 'none';
+      document.getElementById('dp-form-container').style.display = '';
+      document.getElementById('dp-mapping-container').style.display = 'none';
+    }
+
+    async function selecionarLayoutDepara(id) {
+      if (!id) {
+        document.getElementById('dp-form-container').style.display = 'none';
+        document.getElementById('dp-mapping-container').style.display = 'none';
+        document.getElementById('btn-excluir-layout').style.display = 'none';
+        return;
+      }
+      const r = await fetch(`/api/layouts/${id}`);
+      const layout = await r.json();
+      if (layout.erro) { toast(layout.erro, 'danger'); return; }
+
+      layoutAtualDp = layout;
+      document.getElementById('dp-nome').value = layout.nome;
+      document.getElementById('dp-tabela').value = layout.tabela_oracle;
+      document.getElementById('dp-linha-inicio').value = layout.linha_inicio;
+      document.getElementById('dp-tipo-arquivo').value = layout.tipo_arquivo;
+      document.getElementById('dp-separador').value = layout.separador_csv || ',';
+      document.getElementById('dp-sep-container').style.display =
+        layout.tipo_arquivo === 'csv' ? '' : 'none';
+      document.getElementById('btn-excluir-layout').style.display = '';
+      document.getElementById('dp-form-container').style.display = '';
+      document.getElementById('dp-cols-info').textContent = '';
+      colunasArquivo = [];
+
+      // Carregar colunas Oracle e montar grade
+      try {
+        const rc = await fetch(`/api/oracle/colunas?tabela=${encodeURIComponent(layout.tabela_oracle)}`);
+        const dc = await rc.json();
+        if (dc.colunas) {
+          colunasOracle = dc.colunas;
+          renderizarMappingGrid(layout.campos);
+        }
+      } catch {
+        toast('Não foi possível carregar as colunas Oracle. Configure a conexão.', 'warning');
+        renderizarMappingGrid(layout.campos);
+      }
+    }
+
+    function alterarTipoArquivo() {
+      const tipo = document.getElementById('dp-tipo-arquivo').value;
+      document.getElementById('dp-sep-container').style.display = tipo === 'csv' ? '' : 'none';
+    }
+
+    async function carregarColunasOracle() {
+      const tabela = document.getElementById('dp-tabela').value.trim();
+      if (!tabela) { toast('Informe a tabela Oracle', 'warning'); return; }
+      try {
+        const r = await fetch(`/api/oracle/colunas?tabela=${encodeURIComponent(tabela)}`);
+        const d = await r.json();
+        if (d.erro) { toast(d.erro, 'danger'); return; }
+        colunasOracle = d.colunas;
+        const camposExistentes = layoutAtualDp ? layoutAtualDp.campos : [];
+        renderizarMappingGrid(camposExistentes);
+        document.getElementById('dp-form-container').style.display = '';
+        document.getElementById('dp-mapping-container').style.display = '';
+        toast(`${d.colunas.length} coluna(s) carregada(s) da tabela`, 'success');
+      } catch (e) {
+        toast('Erro ao carregar colunas Oracle', 'danger');
+      }
+    }
+
+    async function carregarColunasArquivo() {
+      const input = document.getElementById('dp-arquivo-ref');
+      if (!input.files[0]) { toast('Selecione um arquivo de referência', 'warning'); return; }
+      const tipo = document.getElementById('dp-tipo-arquivo').value;
+      const sep  = document.getElementById('dp-separador').value;
+      const linha = parseInt(document.getElementById('dp-linha-inicio').value) || 2;
+
+      const fd = new FormData();
+      fd.append('arquivo', input.files[0]);
+      fd.append('tipo', tipo);
+      fd.append('separador', sep);
+      fd.append('linha_cabecalho', linha - 1 > 0 ? linha - 1 : 1);
+
+      try {
+        const r = await fetch('/api/import/cabecalho', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.erro) { toast(d.erro, 'danger'); return; }
+        colunasArquivo = d.colunas;
+        document.getElementById('dp-cols-info').textContent =
+          `${d.colunas.length} coluna(s) detectada(s)`;
+        // Re-renderizar para atualizar os selects
+        const camposExistentes = layoutAtualDp ? layoutAtualDp.campos : [];
+        renderizarMappingGrid(camposExistentes);
+        toast('Colunas da planilha carregadas', 'success');
+      } catch {
+        toast('Erro ao ler arquivo de referência', 'danger');
+      }
+    }
+
+    function renderizarMappingGrid(camposExistentes = []) {
+      const tbody = document.getElementById('mapping-tbody');
+      const mapaExistente = {};
+      (camposExistentes || []).forEach(c => { mapaExistente[c.campo_oracle] = c; });
+
+      if (!colunasOracle.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Carregue as colunas Oracle primeiro</td></tr>';
+        document.getElementById('dp-mapping-container').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('dp-mapping-container').style.display = '';
+
+      // Opções de colunas do arquivo
+      let opsColunas = '<option value="">— não mapear —</option>';
+      if (colunasArquivo.length > 0) {
+        colunasArquivo.forEach(c => {
+          opsColunas += `<option value="${c.letra}">${c.letra} — ${c.cabecalho}</option>`;
+        });
+      } else {
+        // Gerar letras genéricas A-Z + AA-AZ
+        for (let i = 0; i < 52; i++) {
+          const letra = indicePraLetra(i);
+          opsColunas += `<option value="${letra}">${letra}</option>`;
+        }
+      }
+
+      tbody.innerHTML = colunasOracle.map(col => {
+        const existente = mapaExistente[col.nome] || {};
+        const tipo = existente.tipo_mapeamento || 'coluna';
+        const colPlan = existente.coluna_planilha || '';
+        const valFixo = existente.valor_fixo || '';
+        const nullable = col.nullable === 'Y';
+
+        return `
+          <tr data-campo="${col.nome}">
+            <td>
+              <code class="text-primary">${col.nome}</code>
+              <span class="text-muted ms-1 small">${col.tipo}</span>
+            </td>
+            <td>
+              <select class="form-select form-select-sm tipo-mapeamento"
+                      onchange="alterarTipoMapeamento(this)">
+                <option value="coluna" ${tipo === 'coluna' ? 'selected' : ''}>Coluna</option>
+                <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Valor fixo</option>
+              </select>
+            </td>
+            <td class="text-center">
+              ${nullable
+                ? '<span class="badge bg-secondary badge-nullable">Sim</span>'
+                : '<span class="badge bg-warning text-dark badge-nullable">Não</span>'}
+            </td>
+            <td>
+              <div class="campo-coluna" style="${tipo === 'fixo' ? 'display:none;' : ''}">
+                <select class="form-select form-select-sm sel-coluna-planilha">
+                  ${opsColunas}
+                </select>
+              </div>
+              <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
+                <input type="text" class="form-control form-control-sm inp-valor-fixo"
+                       value="${valFixo}" placeholder="Valor fixo">
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+
+      // Restaurar seleções de colunas
+      tbody.querySelectorAll('tr[data-campo]').forEach(tr => {
+        const nome = tr.dataset.campo;
+        const ex = mapaExistente[nome];
+        if (ex && ex.tipo_mapeamento === 'coluna' && ex.coluna_planilha) {
+          const sel = tr.querySelector('.sel-coluna-planilha');
+          if (sel) sel.value = ex.coluna_planilha;
+        }
+      });
+    }
+
+    function alterarTipoMapeamento(sel) {
+      const tr = sel.closest('tr');
+      const tipo = sel.value;
+      tr.querySelector('.campo-coluna').style.display = tipo === 'fixo' ? 'none' : '';
+      tr.querySelector('.campo-fixo').style.display = tipo === 'fixo' ? '' : 'none';
+    }
+
+    async function salvarLayout() {
+      const nome = document.getElementById('dp-nome').value.trim();
+      const tabela = document.getElementById('dp-tabela').value.trim();
+      const linhaInicio = parseInt(document.getElementById('dp-linha-inicio').value) || 2;
+      const tipoArquivo = document.getElementById('dp-tipo-arquivo').value;
+      const separador = document.getElementById('dp-separador').value;
+
+      if (!nome) { toast('Informe o nome do layout', 'warning'); return; }
+      if (!tabela) { toast('Informe a tabela Oracle', 'warning'); return; }
+
+      const campos = [];
+      document.querySelectorAll('#mapping-tbody tr[data-campo]').forEach(tr => {
+        const campoOracle = tr.dataset.campo;
+        const tipo = tr.querySelector('.tipo-mapeamento').value;
+        const colPlan = tr.querySelector('.sel-coluna-planilha')?.value || '';
+        const valFixo = tr.querySelector('.inp-valor-fixo')?.value || '';
+        if (tipo === 'coluna' && !colPlan) return; // não mapear
+        campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
+                      coluna_planilha: colPlan || null, valor_fixo: valFixo || null });
+      });
+
+      const payload = { nome, tipo_arquivo: tipoArquivo, separador_csv: separador,
+                        linha_inicio: linhaInicio, tabela_oracle: tabela, campos };
+
+      try {
+        let r;
+        if (layoutAtualDp) {
+          r = await fetch(`/api/layouts/${layoutAtualDp.id}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          r = await fetch('/api/layouts/', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const d = await r.json();
+          if (d.id) layoutAtualDp = { id: d.id };
+        }
+        await r.json();
+        toast('Layout salvo com sucesso', 'success');
+        await carregarLayouts();
+        if (layoutAtualDp) {
+          document.getElementById('dp-layout-sel').value = layoutAtualDp.id;
+        }
+      } catch {
+        toast('Erro ao salvar layout', 'danger');
+      }
+    }
+
+    async function excluirLayout() {
+      if (!layoutAtualDp) return;
+      if (!confirm(`Excluir o layout "${document.getElementById('dp-nome').value}"?`)) return;
+      await fetch(`/api/layouts/${layoutAtualDp.id}`, { method: 'DELETE' });
+      layoutAtualDp = null;
+      colunasOracle = [];
+      document.getElementById('dp-form-container').style.display = 'none';
+      document.getElementById('dp-mapping-container').style.display = 'none';
+      document.getElementById('btn-excluir-layout').style.display = 'none';
+      document.getElementById('dp-layout-sel').value = '';
+      toast('Layout excluído', 'success');
+      await carregarLayouts();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TAB 3 — CONFIGURAÇÃO
+    // ═══════════════════════════════════════════════════════════
+    function alterarModoConexao() {
+      const modo = document.querySelector('input[name="modo-conexao"]:checked').value;
+      document.getElementById('campos-direto').style.display = modo === 'DIRETO' ? '' : 'none';
+      document.getElementById('campos-tns').style.display = modo === 'TNS' ? '' : 'none';
+    }
+
+    async function carregarConfig() {
+      try {
+        const r = await fetch('/api/oracle/config');
+        const d = await r.json();
+        const o = d.oracle || {};
+        const s = d.server || {};
+
+        document.getElementById('cfg-usuario').value = o.usuario || '';
+        document.getElementById('cfg-senha').value = o.senha || '';
+        document.getElementById('cfg-server-porta').value = s.porta || 5000;
+
+        const modo = o.modo_conexao || 'DIRETO';
+        document.getElementById(modo === 'TNS' ? 'modo-tns' : 'modo-direto').checked = true;
+        alterarModoConexao();
+
+        const dir = o.direto || {};
+        document.getElementById('cfg-host').value = dir.host || '';
+        document.getElementById('cfg-porta').value = dir.porta || 1521;
+        document.getElementById('cfg-sid').value = dir.sid || '';
+        document.getElementById('cfg-service-name').value = dir.service_name || '';
+
+        const tns = o.tns || {};
+        document.getElementById('cfg-tns-alias').value = tns.alias || '';
+        document.getElementById('cfg-tnsnames-path').value = tns.tnsnames_path || '';
+        document.getElementById('cfg-oracle-client-bin').value = tns.oracle_client_bin || '';
+      } catch { /* config ainda não existe */ }
+    }
+
+    async function salvarConfig() {
+      const modo = document.querySelector('input[name="modo-conexao"]:checked').value;
+      const payload = {
+        oracle: {
+          modo_conexao: modo,
+          usuario: document.getElementById('cfg-usuario').value,
+          senha: document.getElementById('cfg-senha').value,
+          direto: {
+            host: document.getElementById('cfg-host').value,
+            porta: parseInt(document.getElementById('cfg-porta').value) || 1521,
+            sid: document.getElementById('cfg-sid').value,
+            service_name: document.getElementById('cfg-service-name').value
+          },
+          tns: {
+            alias: document.getElementById('cfg-tns-alias').value,
+            tnsnames_path: document.getElementById('cfg-tnsnames-path').value,
+            oracle_client_bin: document.getElementById('cfg-oracle-client-bin').value
+          }
+        },
+        server: { porta: parseInt(document.getElementById('cfg-server-porta').value) || 5000 }
+      };
+      try {
+        const r = await fetch('/api/oracle/config', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        await r.json();
+        toast('Configuração salva', 'success');
+      } catch {
+        toast('Erro ao salvar configuração', 'danger');
+      }
+    }
+
+    async function testarConexao() {
+      const el = document.getElementById('cfg-resultado');
+      el.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Testando...';
+      try {
+        const r = await fetch('/api/oracle/testar', { method: 'POST' });
+        const d = await r.json();
+        el.innerHTML = `<div class="alert alert-${d.ok ? 'success' : 'danger'} mb-0 py-2">${d.mensagem}</div>`;
+      } catch {
+        el.innerHTML = '<div class="alert alert-danger mb-0 py-2">Erro ao testar conexão</div>';
+      }
+    }
+  </script>
+</body>
+</html>
