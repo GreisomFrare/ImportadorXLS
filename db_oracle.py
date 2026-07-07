@@ -74,27 +74,8 @@ def get_table_columns(schema_table):
         owner, table = parts[0], parts[1]
     else:
         table = parts[0]
-        # Resolve o owner real da mesma forma que Oracle resolve SELECT * FROM <tabela>:
-        # primeiro tabela própria, depois sinônimo privado, depois sinônimo público.
-        cursor.execute(
-            """SELECT owner FROM (
-                 SELECT USER AS owner, 1 AS prio FROM DUAL
-                   WHERE EXISTS (SELECT 1 FROM USER_TABLES WHERE TABLE_NAME = :p_table)
-                 UNION ALL
-                 SELECT TABLE_OWNER, 2 FROM USER_SYNONYMS
-                   WHERE SYNONYM_NAME = :p_table
-                 UNION ALL
-                 SELECT TABLE_OWNER, 3 FROM ALL_SYNONYMS
-                   WHERE SYNONYM_NAME = :p_table AND OWNER = 'PUBLIC'
-                 ORDER BY prio
-               ) WHERE ROWNUM = 1""",
-            {'p_table': table}
-        )
-        row = cursor.fetchone()
-        if not row:
-            conn.close()
-            raise Exception(f"Tabela '{table}' não encontrada. Verifique o nome ou informe SCHEMA.TABELA")
-        owner = row[0]
+        cursor.execute("SELECT USER FROM DUAL")
+        owner = cursor.fetchone()[0]
 
     cursor.execute(
         """SELECT COLUMN_NAME, DATA_TYPE, NULLABLE
