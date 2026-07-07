@@ -36,7 +36,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             layout_id INTEGER NOT NULL REFERENCES layouts(id) ON DELETE CASCADE,
             campo_oracle TEXT NOT NULL,
-            tipo_mapeamento TEXT NOT NULL CHECK(tipo_mapeamento IN ("coluna", "fixo")),
+            tipo_mapeamento TEXT NOT NULL,
             coluna_planilha TEXT,
             valor_fixo TEXT
         );
@@ -55,4 +55,25 @@ def init_db():
         );
     ''')
     db.commit()
+
+    # Migração: recriar campos_layout sem CHECK constraint se o valor 'sequence' for rejeitado
+    try:
+        db.execute("INSERT INTO campos_layout (layout_id, campo_oracle, tipo_mapeamento) VALUES (-1, '__migtest__', 'sequence')")
+        db.execute("DELETE FROM campos_layout WHERE layout_id = -1")
+        db.commit()
+    except Exception:
+        db.rollback()
+        db.execute("ALTER TABLE campos_layout RENAME TO campos_layout_bak")
+        db.execute("""CREATE TABLE campos_layout (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            layout_id INTEGER NOT NULL REFERENCES layouts(id) ON DELETE CASCADE,
+            campo_oracle TEXT NOT NULL,
+            tipo_mapeamento TEXT NOT NULL,
+            coluna_planilha TEXT,
+            valor_fixo TEXT
+        )""")
+        db.execute("INSERT INTO campos_layout SELECT * FROM campos_layout_bak")
+        db.execute("DROP TABLE campos_layout_bak")
+        db.commit()
+
     db.close()

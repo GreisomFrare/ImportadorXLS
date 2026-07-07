@@ -141,11 +141,23 @@ def executar():
     except Exception as e:
         return jsonify({'erro': f'Erro ao conectar ao Oracle: {e}'}), 500
 
-    campos_oracle = [c['campo_oracle'] for c in campos]
-    bind_keys = [c['campo_oracle'].lower().replace(' ', '_') for c in campos]
-    placeholders = [f':{k}' for k in bind_keys]
+    # Monta listas separando campos com sequence (usam NEXTVAL inline) dos demais
+    cols_sql = []
+    vals_sql = []
+    campos_bind = []  # apenas campos que usam bind variable
+
+    for c in campos:
+        cols_sql.append(c['campo_oracle'])
+        if c['tipo_mapeamento'] == 'sequence':
+            seq = (c.get('valor_fixo') or '').strip()
+            vals_sql.append(f'{seq}.NEXTVAL' if seq else 'NULL')
+        else:
+            key = c['campo_oracle'].lower().replace(' ', '_')
+            vals_sql.append(f':{key}')
+            campos_bind.append((c, key))
+
     sql = (f"INSERT INTO {layout['tabela_oracle']} "
-           f"({', '.join(campos_oracle)}) VALUES ({', '.join(placeholders)})")
+           f"({', '.join(cols_sql)}) VALUES ({', '.join(vals_sql)})")
 
     cursor = conn.cursor()
     importadas = 0
@@ -155,7 +167,7 @@ def executar():
     for i, linha in enumerate(linhas, start=layout['linha_inicio']):
         try:
             bind = {}
-            for campo, key in zip(campos, bind_keys):
+            for campo, key in campos_bind:
                 if campo['tipo_mapeamento'] == 'fixo':
                     bind[key] = campo.get('valor_fixo')
                 else:

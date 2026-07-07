@@ -768,16 +768,30 @@
                     onchange="alterarTipoMapeamento(this)">
               <option value="coluna" ${tipo === 'coluna' ? 'selected' : ''}>Coluna</option>
               <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Valor fixo</option>
+              <option value="sequence" ${tipo === 'sequence' ? 'selected' : ''}>Sequência Oracle</option>
             </select>
           </td>
           <td class="text-center">${nullCell}</td>
           <td>
-            <div class="campo-coluna" style="${tipo === 'fixo' ? 'display:none;' : ''}">
+            <div class="campo-coluna" style="${tipo !== 'coluna' ? 'display:none;' : ''}">
               <select class="form-select form-select-sm sel-coluna-planilha">${opsColunas}</select>
             </div>
             <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
               <input type="text" class="form-control form-control-sm inp-valor-fixo"
-                     value="${valFixo}" placeholder="Valor fixo">
+                     value="${tipo === 'fixo' ? valFixo : ''}" placeholder="Valor fixo">
+            </div>
+            <div class="campo-sequence" style="${tipo !== 'sequence' ? 'display:none;' : ''}">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text" title="NEXTVAL será usado no INSERT">
+                  <i class="bi bi-database"></i>
+                </span>
+                <input type="text" class="form-control form-control-sm inp-sequence-nome"
+                       value="${tipo === 'sequence' ? valFixo : ''}"
+                       placeholder="Ex: GEN_CONCILIACARTAO_ID">
+              </div>
+              <div class="form-text ps-1" style="font-size:.7rem;">
+                Será usado: <code class="inp-sequence-preview">${tipo === 'sequence' && valFixo ? valFixo + '.NEXTVAL' : 'SEQUENCE.NEXTVAL'}</code>
+              </div>
             </div>
           </td>
           ${acoesCell}
@@ -836,8 +850,9 @@
     function alterarTipoMapeamento(sel) {
       const tr = sel.closest('tr');
       const tipo = sel.value;
-      tr.querySelector('.campo-coluna').style.display = tipo === 'fixo' ? 'none' : '';
+      tr.querySelector('.campo-coluna').style.display = tipo === 'coluna' ? '' : 'none';
       tr.querySelector('.campo-fixo').style.display = tipo === 'fixo' ? '' : 'none';
+      tr.querySelector('.campo-sequence').style.display = tipo === 'sequence' ? '' : 'none';
     }
 
     async function salvarLayout() {
@@ -860,8 +875,11 @@
         if (!campoOracle) return;
         const tipo = tr.querySelector('.tipo-mapeamento')?.value || 'coluna';
         const colPlan = tr.querySelector('.sel-coluna-planilha')?.value || '';
-        const valFixo = tr.querySelector('.inp-valor-fixo')?.value || '';
+        const valFixo = tipo === 'sequence'
+          ? (tr.querySelector('.inp-sequence-nome')?.value || '').trim()
+          : (tr.querySelector('.inp-valor-fixo')?.value || '');
         if (tipo === 'coluna' && !colPlan) return;
+        if (tipo === 'sequence' && !valFixo) return;
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
                       coluna_planilha: colPlan || null, valor_fixo: valFixo || null });
       });
