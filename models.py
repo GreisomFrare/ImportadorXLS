@@ -56,13 +56,12 @@ def init_db():
     ''')
     db.commit()
 
-    # Migração: recriar campos_layout sem CHECK constraint se o valor 'sequence' for rejeitado
-    try:
-        db.execute("INSERT INTO campos_layout (layout_id, campo_oracle, tipo_mapeamento) VALUES (-1, '__migtest__', 'sequence')")
-        db.execute("DELETE FROM campos_layout WHERE layout_id = -1")
-        db.commit()
-    except Exception:
-        db.rollback()
+    # Migração: recriar campos_layout sem CHECK constraint se necessário
+    schema_row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='campos_layout'"
+    ).fetchone()
+    if schema_row and 'CHECK' in schema_row[0].upper():
+        db.execute("DROP TABLE IF EXISTS campos_layout_bak")
         db.execute("ALTER TABLE campos_layout RENAME TO campos_layout_bak")
         db.execute("""CREATE TABLE campos_layout (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,10 +69,26 @@ def init_db():
             campo_oracle TEXT NOT NULL,
             tipo_mapeamento TEXT NOT NULL,
             coluna_planilha TEXT,
-            valor_fixo TEXT
+            valor_fixo TEXT,
+            mascara_data TEXT
         )""")
-        db.execute("INSERT INTO campos_layout SELECT * FROM campos_layout_bak")
+        cols_bak = [r[1] for r in db.execute("PRAGMA table_info(campos_layout_bak)").fetchall()]
+        cols_new = ['id', 'layout_id', 'campo_oracle', 'tipo_mapeamento',
+                    'coluna_planilha', 'valor_fixo', 'mascara_data']
+        src_cols = ', '.join(c if c in cols_bak else 'NULL' for c in cols_new)
+        db.execute(f"INSERT INTO campos_layout SELECT {src_cols} FROM campos_layout_bak")
         db.execute("DROP TABLE campos_layout_bak")
         db.commit()
+
+    # Migração: adicionar coluna mascara_data se não existir
+    try:
+        db.execute("ALTER TABLE campos_layout ADD COLUMN mascara_data TEXT")
+        db.commit()
+    except Exception:
+        pass
+
+    # Limpar tabela de backup residual de migrações anteriores
+    db.execute("DROP TABLE IF EXISTS campos_layout_bak")
+    db.commit()
 
     db.close()

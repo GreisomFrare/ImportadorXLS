@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+import re
 from flask import Blueprint, request, jsonify
 from models import get_db
 import db_oracle
@@ -8,6 +9,18 @@ import openpyxl
 import xlrd
 
 importacao_bp = Blueprint('importacao', __name__)
+
+_RE_MOEDA_BR = re.compile(r'^\s*(-?)\s*R?\$?\s*([\d.]*\d+),(\d{2})\s*$', re.IGNORECASE)
+
+def _normalizar_numero_br(val):
+    """Converte 'R$ 1.234,56' → '1234.56'. Retorna o valor original se não bater."""
+    if not isinstance(val, str):
+        return val
+    m = _RE_MOEDA_BR.match(val)
+    if m:
+        sinal, inteiros, decimais = m.group(1), m.group(2).replace('.', ''), m.group(3)
+        return f'{sinal}{inteiros}.{decimais}'
+    return val
 
 def _letra_para_indice(letra):
     resultado = 0
@@ -46,9 +59,9 @@ def _ler_planilha(file_bytes, tipo, separador, linha_inicio):
         ws = wb.active
         todas = list(ws.iter_rows(values_only=True))
         wb.close()
-        cabecalho = ([str(v or '') for v in todas[linha_inicio - 2]]
+        cabecalho = (['' if v is None else str(v) for v in todas[linha_inicio - 2]]
                      if linha_inicio > 1 and len(todas) >= linha_inicio - 1 else [])
-        linhas = [[str(v or '') for v in row] for row in todas[linha_inicio - 1:]]
+        linhas = [['' if v is None else str(v) for v in row] for row in todas[linha_inicio - 1:]]
         return cabecalho, linhas
 
 @importacao_bp.route('/preview', methods=['POST'])
@@ -153,7 +166,11 @@ def executar():
             vals_sql.append(f'{seq}.NEXTVAL' if seq else 'NULL')
         else:
             key = c['campo_oracle'].lower().replace(' ', '_')
-            vals_sql.append(f':{key}')
+            mascara = (c.get('mascara_data') or '').strip()
+            if mascara:
+                vals_sql.append(f"TO_DATE(:{key}, '{mascara}')")
+            else:
+                vals_sql.append(f':{key}')
             campos_bind.append((c, key))
 
     sql = (f"INSERT INTO {layout['tabela_oracle']} "
@@ -176,12 +193,18 @@ def executar():
                 else:
                     col = campo.get('coluna_planilha', '')
                     idx = int(col) - 1 if col.isdigit() else _letra_para_indice(col)
-                    bind[key] = linha[idx] if idx < len(linha) else None
+                    val = linha[idx] if idx < len(linha) else None
+                    if val == '':
+                        val = None
+                    elif isinstance(val, str):
+                        val = _normalizar_numero_br(val)
+                    bind[key] = val
             cursor.execute(sql, bind)
             importadas += 1
         except Exception as e:
             erros += 1
-            log_erros.append(f'Linha {i}: {e}')
+            vals_resumo = '; '.join(f'{k}={repr(v)[:40]}' for k, v in bind.items())
+            log_erros.append(f'Linha {i}: {e} → {vals_resumo}')
 
     conn.commit()
     conn.close()

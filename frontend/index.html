@@ -776,6 +776,9 @@
           <td>
             <div class="campo-coluna" style="${tipo !== 'coluna' ? 'display:none;' : ''}">
               <select class="form-select form-select-sm sel-coluna-planilha">${opsColunas}</select>
+              <input type="text" class="form-control form-control-sm inp-mascara-data mt-1"
+                     value="${existente.mascara_data || ''}"
+                     placeholder="Máscara de data, ex: DD/MM/YYYY">
             </div>
             <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
               <input type="text" class="form-control form-control-sm inp-valor-fixo"
@@ -889,8 +892,10 @@
         if (tipo === 'coluna' && !colPlan) return;
         if (tipo === 'sequence' && !valFixo) return;
         // tipo 'arquivo' não precisa de valor — sempre incluir
+        const mascaraData = (tr.querySelector('.inp-mascara-data')?.value || '').trim() || null;
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
-                      coluna_planilha: colPlan || null, valor_fixo: valFixo || null });
+                      coluna_planilha: colPlan || null, valor_fixo: valFixo || null,
+                      mascara_data: mascaraData });
       });
 
       const payload = { nome, tipo_arquivo: tipoArquivo, separador_csv: separador,
