@@ -769,6 +769,7 @@
               <option value="coluna" ${tipo === 'coluna' ? 'selected' : ''}>Coluna</option>
               <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Valor fixo</option>
               <option value="sequence" ${tipo === 'sequence' ? 'selected' : ''}>Sequência Oracle</option>
+              <option value="arquivo" ${tipo === 'arquivo' ? 'selected' : ''}>Nome do arquivo</option>
             </select>
           </td>
           <td class="text-center">${nullCell}</td>
@@ -791,6 +792,12 @@
               </div>
               <div class="form-text ps-1" style="font-size:.7rem;">
                 Será usado: <code class="inp-sequence-preview">${tipo === 'sequence' && valFixo ? valFixo + '.NEXTVAL' : 'SEQUENCE.NEXTVAL'}</code>
+              </div>
+            </div>
+            <div class="campo-arquivo" style="${tipo !== 'arquivo' ? 'display:none;' : ''}">
+              <div class="d-flex align-items-center gap-2 text-muted small">
+                <i class="bi bi-file-earmark-text"></i>
+                Receberá o nome do arquivo importado automaticamente
               </div>
             </div>
           </td>
@@ -853,6 +860,7 @@
       tr.querySelector('.campo-coluna').style.display = tipo === 'coluna' ? '' : 'none';
       tr.querySelector('.campo-fixo').style.display = tipo === 'fixo' ? '' : 'none';
       tr.querySelector('.campo-sequence').style.display = tipo === 'sequence' ? '' : 'none';
+      tr.querySelector('.campo-arquivo').style.display = tipo === 'arquivo' ? '' : 'none';
     }
 
     async function salvarLayout() {
@@ -880,6 +888,7 @@
           : (tr.querySelector('.inp-valor-fixo')?.value || '');
         if (tipo === 'coluna' && !colPlan) return;
         if (tipo === 'sequence' && !valFixo) return;
+        // tipo 'arquivo' não precisa de valor — sempre incluir
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
                       coluna_planilha: colPlan || null, valor_fixo: valFixo || null });
       });

@@ -168,8 +168,11 @@ def executar():
         try:
             bind = {}
             for campo, key in campos_bind:
-                if campo['tipo_mapeamento'] == 'fixo':
+                tipo_camp = campo['tipo_mapeamento']
+                if tipo_camp == 'fixo':
                     bind[key] = campo.get('valor_fixo')
+                elif tipo_camp == 'arquivo':
+                    bind[key] = nome_arquivo
                 else:
                     col = campo.get('coluna_planilha', '')
                     idx = int(col) - 1 if col.isdigit() else _letra_para_indice(col)
