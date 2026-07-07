@@ -417,7 +417,7 @@
       document.getElementById('btn-tema-icon').className =
         tema === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
 
-      await verificarAcesso();
+      ocultarOverlay();
       await carregarLayouts();
       await carregarHistorico();
       carregarConfig();
