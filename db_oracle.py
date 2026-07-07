@@ -67,19 +67,41 @@ def check_user_access(userid, empresa):
 
 def get_table_columns(schema_table):
     parts = schema_table.upper().split('.')
-    if len(parts) == 2:
-        schema, table = parts[0], parts[1]
-    else:
-        schema, table = 'VIASOFT', parts[0]
-
     conn = get_connection()
     cursor = conn.cursor()
+
+    if len(parts) == 2:
+        owner, table = parts[0], parts[1]
+    else:
+        table = parts[0]
+        # Resolve o owner real da mesma forma que Oracle resolve SELECT * FROM <tabela>:
+        # primeiro tabela própria, depois sinônimo privado, depois sinônimo público.
+        cursor.execute(
+            """SELECT owner FROM (
+                 SELECT USER AS owner, 1 AS prio FROM DUAL
+                   WHERE EXISTS (SELECT 1 FROM USER_TABLES WHERE TABLE_NAME = :p_table)
+                 UNION ALL
+                 SELECT TABLE_OWNER, 2 FROM USER_SYNONYMS
+                   WHERE SYNONYM_NAME = :p_table
+                 UNION ALL
+                 SELECT TABLE_OWNER, 3 FROM ALL_SYNONYMS
+                   WHERE SYNONYM_NAME = :p_table AND OWNER = 'PUBLIC'
+                 ORDER BY prio
+               ) WHERE ROWNUM = 1""",
+            {'p_table': table}
+        )
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise Exception(f"Tabela '{table}' não encontrada. Verifique o nome ou informe SCHEMA.TABELA")
+        owner = row[0]
+
     cursor.execute(
         """SELECT COLUMN_NAME, DATA_TYPE, NULLABLE
-           FROM ALL_COLUMNS
+           FROM ALL_TAB_COLUMNS
            WHERE OWNER = :p_owner AND TABLE_NAME = :p_table
            ORDER BY COLUMN_ID""",
-        {'p_owner': schema, 'p_table': table}
+        {'p_owner': owner, 'p_table': table}
     )
     colunas = [{'nome': r[0], 'tipo': r[1], 'nullable': r[2]} for r in cursor.fetchall()]
     conn.close()
