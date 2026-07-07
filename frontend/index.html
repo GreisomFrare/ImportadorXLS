@@ -251,20 +251,29 @@
           <div class="col-12" id="dp-mapping-container" style="display:none;">
             <div class="card">
               <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-arrow-left-right me-1"></i>Mapeamento De Para</span>
-                <button class="btn btn-sm btn-primary" onclick="salvarLayout()">
-                  <i class="bi bi-floppy me-1"></i>Salvar Layout
-                </button>
+                <span><i class="bi bi-arrow-left-right me-1"></i>Mapeamento De Para
+                  <span id="dp-modo-label" class="badge bg-secondary ms-2" style="font-size:.7rem;font-weight:normal;"></span>
+                </span>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-secondary" id="btn-add-campo"
+                          onclick="adicionarCampoManual()" style="display:none;">
+                    <i class="bi bi-plus-lg me-1"></i>Adicionar Campo
+                  </button>
+                  <button class="btn btn-sm btn-primary" onclick="salvarLayout()">
+                    <i class="bi bi-floppy me-1"></i>Salvar Layout
+                  </button>
+                </div>
               </div>
               <div class="card-body p-0">
                 <div class="table-preview-wrapper">
                   <table class="table table-sm table-bordered mapping-grid mb-0">
                     <thead class="table-dark sticky-top">
                       <tr>
-                        <th style="width:30%">Campo Oracle</th>
-                        <th style="width:12%">Tipo</th>
-                        <th style="width:12%">Nulo?</th>
+                        <th style="width:28%">Campo Oracle</th>
+                        <th style="width:12%">Tipo mapeamento</th>
+                        <th style="width:10%">Nulo?</th>
                         <th>Coluna Planilha / Valor Fixo</th>
+                        <th id="th-acoes" style="width:44px;display:none;"></th>
                       </tr>
                     </thead>
                     <tbody id="mapping-tbody"></tbody>
@@ -619,10 +628,9 @@
       document.getElementById('dp-sep-container').style.display = 'none';
       document.getElementById('dp-cols-info').textContent = '';
       document.getElementById('dp-arquivo-ref').value = '';
-      document.getElementById('mapping-tbody').innerHTML = '';
       document.getElementById('btn-excluir-layout').style.display = 'none';
       document.getElementById('dp-form-container').style.display = '';
-      document.getElementById('dp-mapping-container').style.display = 'none';
+      renderizarMappingGrid([]);
     }
 
     async function selecionarLayoutDepara(id) {
@@ -649,18 +657,16 @@
       document.getElementById('dp-cols-info').textContent = '';
       colunasArquivo = [];
 
-      // Carregar colunas Oracle e montar grade
+      // Tentar carregar colunas Oracle; se falhar, abre em modo manual
       try {
         const rc = await fetch(`/api/oracle/colunas?tabela=${encodeURIComponent(layout.tabela_oracle)}`);
         const dc = await rc.json();
-        if (dc.colunas) {
-          colunasOracle = dc.colunas;
-          renderizarMappingGrid(layout.campos);
-        }
+        colunasOracle = dc.colunas || [];
+        if (dc.erro) toast('Tabela Oracle não encontrada — modo manual ativo', 'warning');
       } catch {
-        toast('Não foi possível carregar as colunas Oracle. Configure a conexão.', 'warning');
-        renderizarMappingGrid(layout.campos);
+        colunasOracle = [];
       }
+      renderizarMappingGrid(layout.campos);
     }
 
     function alterarTipoArquivo() {
@@ -674,15 +680,13 @@
       try {
         const r = await fetch(`/api/oracle/colunas?tabela=${encodeURIComponent(tabela)}`);
         const d = await r.json();
-        if (d.erro) { toast(d.erro, 'danger'); return; }
+        if (d.erro) { toast(`Tabela não encontrada: ${d.erro}`, 'danger'); return; }
         colunasOracle = d.colunas;
         const camposExistentes = layoutAtualDp ? layoutAtualDp.campos : [];
         renderizarMappingGrid(camposExistentes);
-        document.getElementById('dp-form-container').style.display = '';
-        document.getElementById('dp-mapping-container').style.display = '';
-        toast(`${d.colunas.length} coluna(s) carregada(s) da tabela`, 'success');
+        toast(`${d.colunas.length} coluna(s) carregada(s) — modo automático`, 'success');
       } catch (e) {
-        toast('Erro ao carregar colunas Oracle', 'danger');
+        toast('Erro ao conectar ao Oracle', 'danger');
       }
     }
 
@@ -715,81 +719,118 @@
       }
     }
 
-    function renderizarMappingGrid(camposExistentes = []) {
-      const tbody = document.getElementById('mapping-tbody');
-      const mapaExistente = {};
-      (camposExistentes || []).forEach(c => { mapaExistente[c.campo_oracle] = c; });
-
-      if (!colunasOracle.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Carregue as colunas Oracle primeiro</td></tr>';
-        document.getElementById('dp-mapping-container').style.display = 'none';
-        return;
-      }
-
-      document.getElementById('dp-mapping-container').style.display = '';
-
-      // Opções de colunas do arquivo
-      let opsColunas = '<option value="">— não mapear —</option>';
+    function _opcoesColunas() {
+      let ops = '<option value="">— não mapear —</option>';
       if (colunasArquivo.length > 0) {
         colunasArquivo.forEach(c => {
-          opsColunas += `<option value="${c.letra}">${c.letra} — ${c.cabecalho}</option>`;
+          ops += `<option value="${c.letra}">${c.letra} — ${c.cabecalho}</option>`;
         });
       } else {
-        // Gerar letras genéricas A-Z + AA-AZ
         for (let i = 0; i < 52; i++) {
-          const letra = indicePraLetra(i);
-          opsColunas += `<option value="${letra}">${letra}</option>`;
+          const l = indicePraLetra(i);
+          ops += `<option value="${l}">${l}</option>`;
         }
       }
+      return ops;
+    }
 
-      tbody.innerHTML = colunasOracle.map(col => {
-        const existente = mapaExistente[col.nome] || {};
-        const tipo = existente.tipo_mapeamento || 'coluna';
-        const colPlan = existente.coluna_planilha || '';
-        const valFixo = existente.valor_fixo || '';
-        const nullable = col.nullable === 'Y';
+    function _renderLinha(nomeOracle, tipoOracle, nullableFlag, existente, opsColunas, manual) {
+      const tipo = existente.tipo_mapeamento || 'coluna';
+      const valFixo = existente.valor_fixo || '';
+      const dataAttr = manual ? '' : `data-campo="${nomeOracle}"`;
 
-        return `
-          <tr data-campo="${col.nome}">
-            <td>
-              <code class="text-primary">${col.nome}</code>
-              <span class="text-muted ms-1 small">${col.tipo}</span>
-            </td>
-            <td>
-              <select class="form-select form-select-sm tipo-mapeamento"
-                      onchange="alterarTipoMapeamento(this)">
-                <option value="coluna" ${tipo === 'coluna' ? 'selected' : ''}>Coluna</option>
-                <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Valor fixo</option>
-              </select>
-            </td>
-            <td class="text-center">
-              ${nullable
-                ? '<span class="badge bg-secondary badge-nullable">Sim</span>'
-                : '<span class="badge bg-warning text-dark badge-nullable">Não</span>'}
-            </td>
-            <td>
-              <div class="campo-coluna" style="${tipo === 'fixo' ? 'display:none;' : ''}">
-                <select class="form-select form-select-sm sel-coluna-planilha">
-                  ${opsColunas}
-                </select>
-              </div>
-              <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
-                <input type="text" class="form-control form-control-sm inp-valor-fixo"
-                       value="${valFixo}" placeholder="Valor fixo">
-              </div>
-            </td>
-          </tr>`;
-      }).join('');
+      const campoCell = manual
+        ? `<input type="text" class="form-control form-control-sm campo-oracle-nome"
+             value="${nomeOracle}" placeholder="Ex: COD_CLIENTE">`
+        : `<code class="text-primary">${nomeOracle}</code>
+           <span class="text-muted ms-1 small">${tipoOracle || ''}</span>`;
 
-      // Restaurar seleções de colunas
-      tbody.querySelectorAll('tr[data-campo]').forEach(tr => {
-        const nome = tr.dataset.campo;
-        const ex = mapaExistente[nome];
-        if (ex && ex.tipo_mapeamento === 'coluna' && ex.coluna_planilha) {
-          const sel = tr.querySelector('.sel-coluna-planilha');
-          if (sel) sel.value = ex.coluna_planilha;
-        }
-      });
+      const nullCell = manual
+        ? `<span class="text-muted small text-center d-block">—</span>`
+        : (nullableFlag === 'Y'
+            ? '<span class="badge bg-secondary badge-nullable">Sim</span>'
+            : '<span class="badge bg-warning text-dark badge-nullable">Não</span>');
+
+      const acoesCell = manual
+        ? `<td class="text-center align-middle">
+             <button class="btn btn-sm btn-outline-danger py-0 px-1"
+                     onclick="this.closest('tr').remove()">
+               <i class="bi bi-x-lg"></i>
+             </button>
+           </td>`
+        : '<td></td>';
+
+      return `
+        <tr ${dataAttr}>
+          <td>${campoCell}</td>
+          <td>
+            <select class="form-select form-select-sm tipo-mapeamento"
+                    onchange="alterarTipoMapeamento(this)">
+              <option value="coluna" ${tipo === 'coluna' ? 'selected' : ''}>Coluna</option>
+              <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Valor fixo</option>
+            </select>
+          </td>
+          <td class="text-center">${nullCell}</td>
+          <td>
+            <div class="campo-coluna" style="${tipo === 'fixo' ? 'display:none;' : ''}">
+              <select class="form-select form-select-sm sel-coluna-planilha">${opsColunas}</select>
+            </div>
+            <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
+              <input type="text" class="form-control form-control-sm inp-valor-fixo"
+                     value="${valFixo}" placeholder="Valor fixo">
+            </div>
+          </td>
+          ${acoesCell}
+        </tr>`;
+    }
+
+    function renderizarMappingGrid(camposExistentes = []) {
+      const tbody = document.getElementById('mapping-tbody');
+      const manual = colunasOracle.length === 0;
+      const ops = _opcoesColunas();
+
+      document.getElementById('dp-mapping-container').style.display = '';
+      document.getElementById('btn-add-campo').style.display = manual ? '' : 'none';
+      document.getElementById('th-acoes').style.display = manual ? '' : 'none';
+      document.getElementById('dp-modo-label').textContent =
+        manual ? 'modo manual' : 'modo automático';
+
+      if (!manual) {
+        const mapaEx = {};
+        (camposExistentes || []).forEach(c => { mapaEx[c.campo_oracle] = c; });
+        tbody.innerHTML = colunasOracle.map(col =>
+          _renderLinha(col.nome, col.tipo, col.nullable, mapaEx[col.nome] || {}, ops, false)
+        ).join('');
+        // Restaurar seleções
+        tbody.querySelectorAll('tr[data-campo]').forEach(tr => {
+          const ex = mapaEx[tr.dataset.campo];
+          if (ex?.tipo_mapeamento === 'coluna' && ex.coluna_planilha) {
+            const sel = tr.querySelector('.sel-coluna-planilha');
+            if (sel) sel.value = ex.coluna_planilha;
+          }
+        });
+      } else {
+        const lista = camposExistentes && camposExistentes.length > 0
+          ? camposExistentes
+          : [{ campo_oracle: '', tipo_mapeamento: 'coluna', coluna_planilha: '', valor_fixo: '' }];
+        tbody.innerHTML = lista.map(c =>
+          _renderLinha(c.campo_oracle, '', undefined, c, ops, true)
+        ).join('');
+        // Restaurar seleções das linhas manuais
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+          const c = (camposExistentes || [])[i];
+          if (c?.tipo_mapeamento === 'coluna' && c.coluna_planilha) {
+            const sel = tr.querySelector('.sel-coluna-planilha');
+            if (sel) sel.value = c.coluna_planilha;
+          }
+        });
+      }
+    }
+
+    function adicionarCampoManual() {
+      const ops = _opcoesColunas();
+      const html = _renderLinha('', '', undefined, {}, ops, true);
+      document.getElementById('mapping-tbody').insertAdjacentHTML('beforeend', html);
     }
 
     function alterarTipoMapeamento(sel) {
@@ -810,12 +851,17 @@
       if (!tabela) { toast('Informe a tabela Oracle', 'warning'); return; }
 
       const campos = [];
-      document.querySelectorAll('#mapping-tbody tr[data-campo]').forEach(tr => {
-        const campoOracle = tr.dataset.campo;
-        const tipo = tr.querySelector('.tipo-mapeamento').value;
+      document.querySelectorAll('#mapping-tbody tr').forEach(tr => {
+        // Modo manual: nome do campo vem de input; modo Oracle: de data-campo
+        const inputNome = tr.querySelector('.campo-oracle-nome');
+        const campoOracle = inputNome
+          ? inputNome.value.trim().toUpperCase()
+          : tr.dataset.campo;
+        if (!campoOracle) return;
+        const tipo = tr.querySelector('.tipo-mapeamento')?.value || 'coluna';
         const colPlan = tr.querySelector('.sel-coluna-planilha')?.value || '';
         const valFixo = tr.querySelector('.inp-valor-fixo')?.value || '';
-        if (tipo === 'coluna' && !colPlan) return; // não mapear
+        if (tipo === 'coluna' && !colPlan) return;
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
                       coluna_planilha: colPlan || null, valor_fixo: valFixo || null });
       });
