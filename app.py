@@ -12,7 +12,7 @@ CONFIG_PATH = r'C:\Viasoft\Client\PlugIns\pluggy_config.json'
 
 def get_port():
     if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(CONFIG_PATH, 'r', encoding='utf-8-sig') as f:
             cfg = json.load(f)
         return cfg.get('server', {}).get('porta', 5000)
     return 5000

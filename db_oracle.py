@@ -9,7 +9,7 @@ _thick_initialized = False
 def load_config():
     if not os.path.exists(CONFIG_PATH):
         return {}
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+    with open(CONFIG_PATH, 'r', encoding='utf-8-sig') as f:
         return json.load(f)
 
 def save_config(config):
