@@ -236,24 +236,35 @@ def executar():
                     val = linha[idx] if idx < len(linha) else None
                     if val == '':
                         val = None
+                    padrao = campo.get('valor_padrao') or None
                     if val is None:
-                        val = campo.get('valor_padrao') or None
+                        val = padrao
                     elif isinstance(val, str):
                         regex = (campo.get('regex_extrair') or '').strip()
                         if regex:
-                            m = re.search(regex, val)
-                            val = m.group(1) if m and m.lastindex else (m.group(0) if m else None)
+                            try:
+                                m = re.search(regex, val)
+                                val = m.group(1) if m and m.lastindex else (m.group(0) if m else None)
+                            except re.error:
+                                val = None
                             if val is None:
-                                val = campo.get('valor_padrao') or None
-                        val = _aplicar_substr(val, campo.get('substr_regra')) if val else val
-                        val = _normalizar_numero_br(val) if val else val
+                                val = padrao
+                        if val:
+                            val = _aplicar_substr(val, campo.get('substr_regra'))
+                            val = _normalizar_numero_br(val)
+                            # Se ainda não for numérico e houver valor padrão, usa o padrão
+                            if padrao and val:
+                                try:
+                                    float(val)
+                                except (ValueError, TypeError):
+                                    val = padrao
                     bind[key] = val
             cursor.execute(sql, bind)
             importadas += 1
         except Exception as e:
             erros += 1
-            vals_resumo = '; '.join(f'{k}={repr(v)[:40]}' for k, v in bind.items())
-            log_erros.append(f'Linha {i}: {e} → {vals_resumo}')
+            vals_linhas = '\n    '.join(f'{k} = {repr(v)}' for k, v in bind.items())
+            log_erros.append(f'Linha {i}: {e}\n    {vals_linhas}')
 
     conn.commit()
     conn.close()
