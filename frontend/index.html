@@ -768,6 +768,7 @@
                     onchange="alterarTipoMapeamento(this)">
               <option value="coluna" ${tipo === 'coluna' ? 'selected' : ''}>Coluna</option>
               <option value="fixo" ${tipo === 'fixo' ? 'selected' : ''}>Valor fixo</option>
+              <option value="calculado" ${tipo === 'calculado' ? 'selected' : ''}>Campo calculado</option>
               <option value="sequence" ${tipo === 'sequence' ? 'selected' : ''}>Sequência Oracle</option>
               <option value="arquivo" ${tipo === 'arquivo' ? 'selected' : ''}>Nome do arquivo</option>
             </select>
@@ -798,6 +799,14 @@
               </div>
               <div class="form-text ps-1" style="font-size:.7rem;">
                 Será usado: <code class="inp-sequence-preview">${tipo === 'sequence' && valFixo ? valFixo + '.NEXTVAL' : 'SEQUENCE.NEXTVAL'}</code>
+              </div>
+            </div>
+            <div class="campo-calculado" style="${tipo !== 'calculado' ? 'display:none;' : ''}">
+              <input type="text" class="form-control form-control-sm inp-formula"
+                     value="${tipo === 'calculado' ? valFixo : ''}"
+                     placeholder="Ex: {E}-{F} ou {5}-{6}">
+              <div class="form-text" style="font-size:.7rem;">
+                Use <code>{A}</code>, <code>{B}</code>… ou <code>{1}</code>, <code>{2}</code>… para referenciar colunas. Operadores: + - * /
               </div>
             </div>
             <div class="campo-arquivo" style="${tipo !== 'arquivo' ? 'display:none;' : ''}">
@@ -865,6 +874,7 @@
       const tipo = sel.value;
       tr.querySelector('.campo-coluna').style.display = tipo === 'coluna' ? '' : 'none';
       tr.querySelector('.campo-fixo').style.display = tipo === 'fixo' ? '' : 'none';
+      tr.querySelector('.campo-calculado').style.display = tipo === 'calculado' ? '' : 'none';
       tr.querySelector('.campo-sequence').style.display = tipo === 'sequence' ? '' : 'none';
       tr.querySelector('.campo-arquivo').style.display = tipo === 'arquivo' ? '' : 'none';
     }
@@ -891,9 +901,12 @@
         const colPlan = tr.querySelector('.sel-coluna-planilha')?.value || '';
         const valFixo = tipo === 'sequence'
           ? (tr.querySelector('.inp-sequence-nome')?.value || '').trim()
+          : tipo === 'calculado'
+          ? (tr.querySelector('.inp-formula')?.value || '').trim()
           : (tr.querySelector('.inp-valor-fixo')?.value || '');
         if (tipo === 'coluna' && !colPlan) return;
         if (tipo === 'sequence' && !valFixo) return;
+        if (tipo === 'calculado' && !valFixo) return;
         // tipo 'arquivo' não precisa de valor — sempre incluir
         const mascaraData = (tr.querySelector('.inp-mascara-data')?.value || '').trim() || null;
         const substrRegra = (tr.querySelector('.inp-substr-regra')?.value || '').trim() || null;

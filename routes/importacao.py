@@ -39,6 +39,27 @@ def _normalizar_numero_br(val):
         return f'{sinal}{inteiros}.{decimais}'
     return val
 
+def _avaliar_formula(formula, linha):
+    """Avalia fórmula com referências de colunas: {E}-{F} ou {5}-{6}."""
+    def resolver_col(m):
+        ref = m.group(1)
+        idx = int(ref) - 1 if ref.isdigit() else _letra_para_indice(ref)
+        val = linha[idx] if idx < len(linha) else ''
+        if val == '' or val is None:
+            return '0'
+        val = _normalizar_numero_br(str(val))
+        try:
+            float(val)
+            return val
+        except (ValueError, TypeError):
+            return '0'
+    expr = re.sub(r'\{([A-Za-z0-9]+)\}', resolver_col, formula)
+    try:
+        result = eval(expr, {'__builtins__': {}}, {})  # noqa: S307
+        return str(round(float(result), 2))
+    except Exception:
+        return None
+
 def _letra_para_indice(letra):
     resultado = 0
     for c in letra.upper():
@@ -207,6 +228,8 @@ def executar():
                     bind[key] = campo.get('valor_fixo')
                 elif tipo_camp == 'arquivo':
                     bind[key] = nome_arquivo
+                elif tipo_camp == 'calculado':
+                    bind[key] = _avaliar_formula(campo.get('valor_fixo') or '', linha)
                 else:
                     col = campo.get('coluna_planilha', '')
                     idx = int(col) - 1 if col.isdigit() else _letra_para_indice(col)
