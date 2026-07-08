@@ -2,29 +2,28 @@
 setlocal
 echo === Build ImportadorXLS ===
 
-REM --- PyInstaller ---
+REM --- Gerar executavel ---
 pyinstaller service.spec --noconfirm
 if errorlevel 1 (
     echo ERRO no PyInstaller
-    exit /b 1
-)
-echo Build do executavel concluido.
-
-REM --- Inno Setup ---
-set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-if not exist %ISCC% (
-    echo Inno Setup nao encontrado em %ISCC%
-    echo Instale o Inno Setup 6 ou ajuste o caminho no build.bat
+    pause
     exit /b 1
 )
 
-if not exist "dist\installer" mkdir "dist\installer"
-%ISCC% installer\installer.iss
-if errorlevel 1 (
-    echo ERRO no Inno Setup
-    exit /b 1
-)
+REM --- Montar pacote de distribuicao ---
+if exist "dist\package" rmdir /s /q "dist\package"
+mkdir "dist\package"
+
+copy /y "dist\ImportadorXLS.exe"             "dist\package\"
+copy /y "installer\ImportadorXLS.conf"        "dist\package\"
+copy /y "installer\ImportadorXLS.jvpi"        "dist\package\"
+copy /y "installer\instalar.bat"              "dist\package\"
+copy /y "installer\desinstalar.bat"           "dist\package\"
+
+REM Config padrao (nao sobrescreve se ja existir no cliente)
+echo {"oracle":{"modo_conexao":"DIRETO","usuario":"","senha":"","direto":{"host":"","porta":1521,"sid":"","service_name":""},"tns":{"alias":"","tnsnames_path":"","oracle_client_bin":""}},"server":{"porta":5002}} > "dist\package\importadorxls_config.json"
 
 echo.
-echo === Build finalizado ===
-echo Instalador gerado em: dist\installer\ImportadorXLS_Setup.exe
+echo Pacote gerado em: dist\package\
+echo Compacte a pasta dist\package\ e entregue ao cliente.
+pause
