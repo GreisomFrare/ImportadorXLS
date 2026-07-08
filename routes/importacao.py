@@ -12,6 +12,23 @@ importacao_bp = Blueprint('importacao', __name__)
 
 _RE_MOEDA_BR = re.compile(r'^\s*(-?)\s*R?\$?\s*([\d.]*\d+),(\d{2})\s*$', re.IGNORECASE)
 
+def _aplicar_substr(val, regra):
+    """Aplica recorte de string. regra: '-6' = últimos 6, '0:6' = primeiros 6, '3:9' = posição 3 a 9."""
+    if not regra or not isinstance(val, str):
+        return val
+    regra = regra.strip()
+    try:
+        if ':' in regra:
+            partes = regra.split(':', 1)
+            de = int(partes[0]) if partes[0] else None
+            ate = int(partes[1]) if partes[1] else None
+            return val[de:ate]
+        else:
+            n = int(regra)
+            return val[n:] if n >= 0 else val[n:]
+    except (ValueError, TypeError):
+        return val
+
 def _normalizar_numero_br(val):
     """Converte 'R$ 1.234,56' → '1234.56'. Retorna o valor original se não bater."""
     if not isinstance(val, str):
@@ -197,6 +214,7 @@ def executar():
                     if val == '':
                         val = None
                     elif isinstance(val, str):
+                        val = _aplicar_substr(val, campo.get('substr_regra'))
                         val = _normalizar_numero_br(val)
                     bind[key] = val
             cursor.execute(sql, bind)

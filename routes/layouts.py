@@ -60,11 +60,12 @@ def atualizar(layout_id):
         for campo in data['campos']:
             db.execute(
                 """INSERT INTO campos_layout
-                   (layout_id, campo_oracle, tipo_mapeamento, coluna_planilha, valor_fixo, mascara_data)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                   (layout_id, campo_oracle, tipo_mapeamento, coluna_planilha, valor_fixo, mascara_data, substr_regra)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (layout_id, campo['campo_oracle'], campo['tipo_mapeamento'],
                  campo.get('coluna_planilha'), campo.get('valor_fixo'),
-                 campo.get('mascara_data') or None)
+                 campo.get('mascara_data') or None,
+                 campo.get('substr_regra') or None)
             )
     db.commit()
     return jsonify({'ok': True})

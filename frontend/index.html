@@ -779,6 +779,9 @@
               <input type="text" class="form-control form-control-sm inp-mascara-data mt-1"
                      value="${existente.mascara_data || ''}"
                      placeholder="Máscara de data, ex: DD/MM/YYYY">
+              <input type="text" class="form-control form-control-sm inp-substr-regra mt-1"
+                     value="${existente.substr_regra || ''}"
+                     placeholder="Recorte: -6 (últimos 6), 0:6 (primeiros 6)">
             </div>
             <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
               <input type="text" class="form-control form-control-sm inp-valor-fixo"
@@ -893,9 +896,10 @@
         if (tipo === 'sequence' && !valFixo) return;
         // tipo 'arquivo' não precisa de valor — sempre incluir
         const mascaraData = (tr.querySelector('.inp-mascara-data')?.value || '').trim() || null;
+        const substrRegra = (tr.querySelector('.inp-substr-regra')?.value || '').trim() || null;
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
                       coluna_planilha: colPlan || null, valor_fixo: valFixo || null,
-                      mascara_data: mascaraData });
+                      mascara_data: mascaraData, substr_regra: substrRegra });
       });
 
       const payload = { nome, tipo_arquivo: tipoArquivo, separador_csv: separador,
