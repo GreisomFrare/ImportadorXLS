@@ -8,7 +8,7 @@ from routes.layouts import layouts_bp
 from routes.importacao import importacao_bp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = r'C:\Viasoft\Client\PlugIns\pluggy_config.json'
+CONFIG_PATH = r'C:\Viasoft\Client\PlugIns\importadorxls_config.json'
 
 def get_port():
     if os.path.exists(CONFIG_PATH):

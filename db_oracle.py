@@ -2,7 +2,7 @@ import oracledb
 import json
 import os
 
-CONFIG_PATH = r'C:\Viasoft\Client\PlugIns\pluggy_config.json'
+CONFIG_PATH = r'C:\Viasoft\Client\PlugIns\importadorxls_config.json'
 
 _thick_initialized = False
 
