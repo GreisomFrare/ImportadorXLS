@@ -783,6 +783,12 @@
               <input type="text" class="form-control form-control-sm inp-substr-regra mt-1"
                      value="${existente.substr_regra || ''}"
                      placeholder="Recorte: -6 (últimos 6), 0:6 (primeiros 6)">
+              <input type="text" class="form-control form-control-sm inp-regex-extrair mt-1"
+                     value="${existente.regex_extrair || ''}"
+                     placeholder="Regex: \\((\\d+) para extrair de (2/2)">
+              <input type="text" class="form-control form-control-sm inp-valor-padrao mt-1"
+                     value="${existente.valor_padrao || ''}"
+                     placeholder="Valor padrão quando vazio (ex: 1)">
             </div>
             <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
               <input type="text" class="form-control form-control-sm inp-valor-fixo"
@@ -908,11 +914,14 @@
         if (tipo === 'sequence' && !valFixo) return;
         if (tipo === 'calculado' && !valFixo) return;
         // tipo 'arquivo' não precisa de valor — sempre incluir
-        const mascaraData = (tr.querySelector('.inp-mascara-data')?.value || '').trim() || null;
-        const substrRegra = (tr.querySelector('.inp-substr-regra')?.value || '').trim() || null;
+        const mascaraData  = (tr.querySelector('.inp-mascara-data')?.value  || '').trim() || null;
+        const substrRegra  = (tr.querySelector('.inp-substr-regra')?.value  || '').trim() || null;
+        const regexExtrair = (tr.querySelector('.inp-regex-extrair')?.value || '').trim() || null;
+        const valorPadrao  = (tr.querySelector('.inp-valor-padrao')?.value  || '').trim() || null;
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
                       coluna_planilha: colPlan || null, valor_fixo: valFixo || null,
-                      mascara_data: mascaraData, substr_regra: substrRegra });
+                      mascara_data: mascaraData, substr_regra: substrRegra,
+                      regex_extrair: regexExtrair, valor_padrao: valorPadrao });
       });
 
       const payload = { nome, tipo_arquivo: tipoArquivo, separador_csv: separador,

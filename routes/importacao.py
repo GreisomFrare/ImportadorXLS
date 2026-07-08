@@ -236,9 +236,17 @@ def executar():
                     val = linha[idx] if idx < len(linha) else None
                     if val == '':
                         val = None
+                    if val is None:
+                        val = campo.get('valor_padrao') or None
                     elif isinstance(val, str):
-                        val = _aplicar_substr(val, campo.get('substr_regra'))
-                        val = _normalizar_numero_br(val)
+                        regex = (campo.get('regex_extrair') or '').strip()
+                        if regex:
+                            m = re.search(regex, val)
+                            val = m.group(1) if m and m.lastindex else (m.group(0) if m else None)
+                            if val is None:
+                                val = campo.get('valor_padrao') or None
+                        val = _aplicar_substr(val, campo.get('substr_regra')) if val else val
+                        val = _normalizar_numero_br(val) if val else val
                     bind[key] = val
             cursor.execute(sql, bind)
             importadas += 1

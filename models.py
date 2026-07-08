@@ -94,6 +94,18 @@ def init_db():
     except Exception:
         pass
 
+    # Migração: regex de extração e valor padrão
+    try:
+        db.execute("ALTER TABLE campos_layout ADD COLUMN regex_extrair TEXT")
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute("ALTER TABLE campos_layout ADD COLUMN valor_padrao TEXT")
+        db.commit()
+    except Exception:
+        pass
+
     # Limpar tabela de backup residual de migrações anteriores
     db.execute("DROP TABLE IF EXISTS campos_layout_bak")
     db.commit()
