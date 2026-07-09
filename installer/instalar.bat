@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 set ORIGEM=%~dp0
 set APP_DIR=C:\Viasoft\Client\PlugIns\ImportadorXLS
 set CONFIG_DIR=C:\Viasoft\Client\PlugIns
@@ -61,9 +61,9 @@ if not exist "%PLUGINS_DIR%\ImportadorXLS.conf" (
         echo AppName=FinAgro3c
         echo MenuAction=Integracoes
         echo Caption=Importador XLS
-        echo URL=http://%COMPUTERNAME%:%PORTA%/index.html
+        echo URL=http://%COMPUTERNAME%:!PORTA!/index.html
     ) > "%PLUGINS_DIR%\ImportadorXLS.conf"
-    echo Arquivo .conf criado ^(URL: http://%COMPUTERNAME%:%PORTA%/index.html^).
+    echo Arquivo .conf criado ^(URL: http://%COMPUTERNAME%:!PORTA!/index.html^).
 ) else (
     echo Arquivo .conf existente mantido.
 )
