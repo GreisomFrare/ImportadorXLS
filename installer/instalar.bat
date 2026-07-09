@@ -3,7 +3,7 @@ setlocal
 set ORIGEM=%~dp0
 set APP_DIR=C:\Viasoft\Client\PlugIns\ImportadorXLS
 set CONFIG_DIR=C:\Viasoft\Client\PlugIns
-set PLUGINS_DIR=C:\ViasoftTMS\Viasoft\Client\Plugins
+set PLUGINS_DIR=C:\Viasoft\Client\PlugIns
 
 echo === Instalando ImportadorXLS ===
 

@@ -12,8 +12,8 @@ PrivilegesRequired=admin
 
 [Files]
 Source: "dist\ImportadorXLS.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "installer\ImportadorXLS.jvpi"; DestDir: "C:\ViasoftTMS\Viasoft\Client\Plugins"; Flags: ignoreversion
-Source: "installer\ImportadorXLS.conf"; DestDir: "C:\ViasoftTMS\Viasoft\Client\Plugins"; Flags: ignoreversion
+Source: "installer\ImportadorXLS.jvpi"; DestDir: "C:\Viasoft\Client\PlugIns"; Flags: ignoreversion
+Source: "installer\ImportadorXLS.conf"; DestDir: "C:\Viasoft\Client\PlugIns"; Flags: ignoreversion
 
 [Run]
 Filename: "{app}\ImportadorXLS.exe"; Parameters: "install"; StatusMsg: "Instalando servi�o..."; Flags: runhidden
