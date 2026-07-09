@@ -3,7 +3,7 @@ setlocal
 echo === Build ImportadorXLS ===
 
 REM --- Gerar executavel ---
-pyinstaller service.spec --noconfirm
+python -m PyInstaller service.spec --noconfirm
 if errorlevel 1 (
     echo ERRO no PyInstaller
     pause
