@@ -78,6 +78,10 @@ if not exist "%CONFIG_DIR%\importadorxls_config.json" (
     echo Configuracao existente mantida.
 )
 
+REM Verificar e instalar WebView2 se necessario
+echo Verificando WebView2...
+powershell -NoProfile -Command "$wv=Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -EA SilentlyContinue; $wv2=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -EA SilentlyContinue; if($wv -or $wv2){Write-Host 'WebView2 ja instalado.'} else {Write-Host 'WebView2 nao encontrado. Instalando...'; $setup=\"$env:TEMP\WebView2Setup.exe\"; Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $setup -UseBasicParsing; Start-Process $setup -ArgumentList '/silent /install' -Wait; Write-Host 'WebView2 instalado.'}"
+
 REM Instalar e iniciar servico Windows
 "%APP_DIR%\ImportadorXLS.exe" install
 if errorlevel 1 (
