@@ -49,10 +49,22 @@ if errorlevel 1 (
 )
 echo Executavel copiado.
 
-REM Copiar arquivos do plugin ERP
-copy /y "%ORIGEM%ImportadorXLS.conf" "%PLUGINS_DIR%\" >nul
+REM Descobrir porta configurada (usa 5002 se config nao existir ainda)
+set PORTA=5002
+if exist "%CONFIG_DIR%\importadorxls_config.json" (
+    for /f "usebackq delims=" %%p in (`powershell -NoProfile -Command "try{(Get-Content '%CONFIG_DIR%\importadorxls_config.json' -Raw | ConvertFrom-Json).server.porta}catch{5002}"`) do set PORTA=%%p
+)
+
+REM Gerar arquivo .conf com o nome real da maquina e porta correta
+(
+    echo [cfg]
+    echo AppName=FinAgro3c
+    echo MenuAction=Integracoes
+    echo Caption=Importador XLS
+    echo URL=http://%COMPUTERNAME%:%PORTA%/index.html
+) > "%PLUGINS_DIR%\ImportadorXLS.conf"
 copy /y "%ORIGEM%ImportadorXLS.jvpi" "%PLUGINS_DIR%\" >nul
-echo Arquivos do plugin ERP copiados.
+echo Arquivos do plugin ERP copiados ^(URL: http://%COMPUTERNAME%:%PORTA%/index.html^).
 
 REM Copiar config padrao somente se nao existir
 if not exist "%CONFIG_DIR%\importadorxls_config.json" (
