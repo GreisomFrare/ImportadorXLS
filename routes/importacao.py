@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import os
 import re
 from flask import Blueprint, request, jsonify
@@ -240,6 +241,17 @@ def executar():
                     if val is None:
                         val = padrao
                     elif isinstance(val, str):
+                        # De Para de valores: substitui valor da planilha antes de qualquer transformação
+                        depara_raw = (campo.get('depara_json') or '').strip()
+                        if depara_raw:
+                            try:
+                                for regra in json.loads(depara_raw):
+                                    if str(regra.get('origem', '')) == val:
+                                        val = str(regra.get('destino', ''))
+                                        break
+                            except (json.JSONDecodeError, Exception):
+                                pass
+
                         regex = (campo.get('regex_extrair') or '').strip()
                         if regex:
                             try:

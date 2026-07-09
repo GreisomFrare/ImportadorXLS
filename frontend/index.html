@@ -801,6 +801,39 @@
       return ops;
     }
 
+    function _renderDeParaLinhas(deParaJson) {
+      let regras = [];
+      try { if (deParaJson) regras = JSON.parse(deParaJson); } catch(e) {}
+      return regras.map(r => `
+        <div class="depara-linha d-flex align-items-center gap-1 mt-1">
+          <input type="text" class="form-control form-control-sm dp-origem"
+                 value="${(r.origem || '').replace(/"/g, '&quot;')}" placeholder="Valor na planilha">
+          <i class="bi bi-arrow-right text-muted flex-shrink-0"></i>
+          <input type="text" class="form-control form-control-sm dp-destino"
+                 value="${(r.destino || '').replace(/"/g, '&quot;')}" placeholder="Gravar como">
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 flex-shrink-0"
+                  onclick="this.closest('.depara-linha').remove()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>`).join('');
+    }
+
+    function adicionarDeParaLinha(btn) {
+      const linhas = btn.closest('.depara-valores-container').querySelector('.depara-linhas');
+      const div = document.createElement('div');
+      div.className = 'depara-linha d-flex align-items-center gap-1 mt-1';
+      div.innerHTML = `
+        <input type="text" class="form-control form-control-sm dp-origem" placeholder="Valor na planilha">
+        <i class="bi bi-arrow-right text-muted flex-shrink-0"></i>
+        <input type="text" class="form-control form-control-sm dp-destino" placeholder="Gravar como">
+        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 flex-shrink-0"
+                onclick="this.closest('.depara-linha').remove()">
+          <i class="bi bi-x-lg"></i>
+        </button>`;
+      linhas.appendChild(div);
+      div.querySelector('.dp-origem').focus();
+    }
+
     function _renderLinha(nomeOracle, tipoOracle, nullableFlag, existente, opsColunas, manual) {
       const tipo = existente.tipo_mapeamento || 'coluna';
       const valFixo = existente.valor_fixo || '';
@@ -856,6 +889,26 @@
               <input type="text" class="form-control form-control-sm inp-valor-padrao mt-1"
                      value="${existente.valor_padrao || ''}"
                      placeholder="Valor padrão quando vazio (ex: 1)">
+              ${(() => {
+                let regras = [];
+                try { if (existente.depara_json) regras = JSON.parse(existente.depara_json); } catch(e) {}
+                const badge = regras.length ? `<span class="badge bg-primary ms-1">${regras.length}</span>` : '';
+                const linhasHtml = _renderDeParaLinhas(existente.depara_json || '');
+                return `
+              <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0"
+                        onclick="const c=this.nextElementSibling;c.style.display=c.style.display==='none'?'':'none'">
+                  <i class="bi bi-table me-1"></i>De Para de valores${badge}
+                </button>
+                <div class="depara-valores-container mt-2" style="${regras.length ? '' : 'display:none;'}">
+                  <div class="depara-linhas">${linhasHtml}</div>
+                  <button type="button" class="btn btn-sm btn-outline-success mt-1"
+                          onclick="adicionarDeParaLinha(this)">
+                    <i class="bi bi-plus-lg me-1"></i>Adicionar regra
+                  </button>
+                </div>
+              </div>`;
+              })()}
             </div>
             <div class="campo-fixo" style="${tipo !== 'fixo' ? 'display:none;' : ''}">
               <input type="text" class="form-control form-control-sm inp-valor-fixo"
@@ -985,10 +1038,18 @@
         const substrRegra  = (tr.querySelector('.inp-substr-regra')?.value  || '').trim() || null;
         const regexExtrair = (tr.querySelector('.inp-regex-extrair')?.value || '').trim() || null;
         const valorPadrao  = (tr.querySelector('.inp-valor-padrao')?.value  || '').trim() || null;
+        const deParaRegras = [];
+        tr.querySelectorAll('.depara-linha').forEach(linha => {
+          const origem  = (linha.querySelector('.dp-origem')?.value  || '').trim();
+          const destino = (linha.querySelector('.dp-destino')?.value || '').trim();
+          if (origem !== '') deParaRegras.push({ origem, destino });
+        });
+        const deparaJson = deParaRegras.length ? JSON.stringify(deParaRegras) : null;
         campos.push({ campo_oracle: campoOracle, tipo_mapeamento: tipo,
                       coluna_planilha: colPlan || null, valor_fixo: valFixo || null,
                       mascara_data: mascaraData, substr_regra: substrRegra,
-                      regex_extrair: regexExtrair, valor_padrao: valorPadrao });
+                      regex_extrair: regexExtrair, valor_padrao: valorPadrao,
+                      depara_json: deparaJson });
       });
 
       const payload = { nome, tipo_arquivo: tipoArquivo, separador_csv: separador,

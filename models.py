@@ -106,6 +106,13 @@ def init_db():
     except Exception:
         pass
 
+    # Migração: de-para de valores por campo (JSON)
+    try:
+        db.execute("ALTER TABLE campos_layout ADD COLUMN depara_json TEXT")
+        db.commit()
+    except Exception:
+        pass
+
     # Limpar tabela de backup residual de migrações anteriores
     db.execute("DROP TABLE IF EXISTS campos_layout_bak")
     db.commit()

@@ -62,14 +62,15 @@ def atualizar(layout_id):
             db.execute(
                 """INSERT INTO campos_layout
                    (layout_id, campo_oracle, tipo_mapeamento, coluna_planilha, valor_fixo,
-                    mascara_data, substr_regra, regex_extrair, valor_padrao)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    mascara_data, substr_regra, regex_extrair, valor_padrao, depara_json)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (layout_id, campo['campo_oracle'], campo['tipo_mapeamento'],
                  campo.get('coluna_planilha'), campo.get('valor_fixo'),
                  campo.get('mascara_data') or None,
                  campo.get('substr_regra') or None,
                  campo.get('regex_extrair') or None,
-                 campo.get('valor_padrao') or None)
+                 campo.get('valor_padrao') or None,
+                 campo.get('depara_json') or None)
             )
     db.commit()
     return jsonify({'ok': True})
@@ -106,6 +107,7 @@ def exportar(layout_id):
                 'substr_regra': c['substr_regra'],
                 'regex_extrair': c['regex_extrair'],
                 'valor_padrao': c['valor_padrao'],
+                'depara_json': c['depara_json'],
             }
             for c in campos
         ]
@@ -140,14 +142,15 @@ def importar():
         db.execute(
             """INSERT INTO campos_layout
                (layout_id, campo_oracle, tipo_mapeamento, coluna_planilha, valor_fixo,
-                mascara_data, substr_regra, regex_extrair, valor_padrao)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                mascara_data, substr_regra, regex_extrair, valor_padrao, depara_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (layout_id, campo['campo_oracle'], campo['tipo_mapeamento'],
              campo.get('coluna_planilha'), campo.get('valor_fixo'),
              campo.get('mascara_data') or None,
              campo.get('substr_regra') or None,
              campo.get('regex_extrair') or None,
-             campo.get('valor_padrao') or None)
+             campo.get('valor_padrao') or None,
+             campo.get('depara_json') or None)
         )
     db.commit()
     return jsonify({'id': layout_id, 'nome': data.get('nome', 'Layout Importado')}), 201
