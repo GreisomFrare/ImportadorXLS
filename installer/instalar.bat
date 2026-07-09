@@ -69,6 +69,10 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
+REM Configurar inicio automatico com delay (Automatic Delayed Start)
+sc config ImportadorXLS start= delayed-auto >nul
+
 net start ImportadorXLS
 if errorlevel 1 (
     echo ERRO ao iniciar o servico.
