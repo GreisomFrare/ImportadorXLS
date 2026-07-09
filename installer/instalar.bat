@@ -9,15 +9,44 @@ echo === Instalando ImportadorXLS ===
 
 REM Parar servico se ja existir
 net stop ImportadorXLS 2>nul
+
+REM Aguardar o processo parar completamente antes de remover
+:aguardar_parada
+sc query ImportadorXLS 2>nul | find "STOPPED" >nul
+if not errorlevel 1 goto remover_servico
+sc query ImportadorXLS 2>nul | find "SERVICE_NAME" >nul
+if errorlevel 1 goto remover_servico
+timeout /t 2 /nobreak >nul
+goto aguardar_parada
+
+:remover_servico
 "%APP_DIR%\ImportadorXLS.exe" remove 2>nul
 
+REM Aguardar o SCM liberar o servico (evita erro 1072)
+:aguardar_remocao
+sc query ImportadorXLS 2>nul | find "SERVICE_NAME" >nul
+if errorlevel 1 goto criar_dirs
+timeout /t 2 /nobreak >nul
+goto aguardar_remocao
+
+:criar_dirs
 REM Criar diretorios
 if not exist "%APP_DIR%"     mkdir "%APP_DIR%"
 if not exist "%CONFIG_DIR%"  mkdir "%CONFIG_DIR%"
 if not exist "%PLUGINS_DIR%" mkdir "%PLUGINS_DIR%"
 
-REM Copiar executavel
+REM Copiar executavel (com retry caso o processo anterior ainda esteja liberando o arquivo)
 copy /y "%ORIGEM%ImportadorXLS.exe" "%APP_DIR%\" >nul
+if errorlevel 1 (
+    echo Arquivo em uso, aguardando liberacao...
+    timeout /t 5 /nobreak >nul
+    copy /y "%ORIGEM%ImportadorXLS.exe" "%APP_DIR%\" >nul
+    if errorlevel 1 (
+        echo ERRO ao copiar executavel.
+        pause
+        exit /b 1
+    )
+)
 echo Executavel copiado.
 
 REM Copiar arquivos do plugin ERP
