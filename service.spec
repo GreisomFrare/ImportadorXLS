@@ -14,6 +14,7 @@ a = Analysis(
         'win32serviceutil',
         'win32service',
         'win32event',
+        'win32timezone',
         'servicemanager',
         'routes.oracle',
         'routes.layouts',
