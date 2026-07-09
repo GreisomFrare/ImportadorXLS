@@ -179,6 +179,15 @@
                         onclick="excluirLayout()">
                   <i class="bi bi-trash me-1"></i>Excluir
                 </button>
+                <button class="btn btn-outline-info btn-sm" id="btn-exportar-layout" style="display:none;"
+                        onclick="exportarLayout()">
+                  <i class="bi bi-download me-1"></i>Exportar
+                </button>
+                <label class="btn btn-outline-secondary btn-sm mb-0" title="Importar layout de arquivo JSON">
+                  <i class="bi bi-upload me-1"></i>Importar
+                  <input type="file" id="inp-importar-layout" accept=".json" style="display:none;"
+                         onchange="importarLayout(this)">
+                </label>
               </div>
             </div>
           </div>
@@ -629,6 +638,7 @@
       document.getElementById('dp-cols-info').textContent = '';
       document.getElementById('dp-arquivo-ref').value = '';
       document.getElementById('btn-excluir-layout').style.display = 'none';
+      document.getElementById('btn-exportar-layout').style.display = 'none';
       document.getElementById('dp-form-container').style.display = '';
       renderizarMappingGrid([]);
     }
@@ -638,6 +648,7 @@
         document.getElementById('dp-form-container').style.display = 'none';
         document.getElementById('dp-mapping-container').style.display = 'none';
         document.getElementById('btn-excluir-layout').style.display = 'none';
+        document.getElementById('btn-exportar-layout').style.display = 'none';
         return;
       }
       const r = await fetch(`/api/layouts/${id}`);
@@ -653,6 +664,7 @@
       document.getElementById('dp-sep-container').style.display =
         layout.tipo_arquivo === 'csv' ? '' : 'none';
       document.getElementById('btn-excluir-layout').style.display = '';
+      document.getElementById('btn-exportar-layout').style.display = '';
       document.getElementById('dp-form-container').style.display = '';
       document.getElementById('dp-cols-info').textContent = '';
       colunasArquivo = [];
@@ -962,9 +974,39 @@
       document.getElementById('dp-form-container').style.display = 'none';
       document.getElementById('dp-mapping-container').style.display = 'none';
       document.getElementById('btn-excluir-layout').style.display = 'none';
+      document.getElementById('btn-exportar-layout').style.display = 'none';
       document.getElementById('dp-layout-sel').value = '';
       toast('Layout excluído', 'success');
       await carregarLayouts();
+    }
+
+    function exportarLayout() {
+      if (!layoutAtualDp) return;
+      window.location.href = `/api/layouts/${layoutAtualDp.id}/exportar`;
+    }
+
+    async function importarLayout(input) {
+      const file = input.files[0];
+      if (!file) return;
+      input.value = '';
+      let dados;
+      try {
+        dados = JSON.parse(await file.text());
+      } catch {
+        toast('Arquivo JSON inválido', 'danger');
+        return;
+      }
+      const r = await fetch('/api/layouts/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      const res = await r.json();
+      if (!r.ok) { toast(res.erro || 'Erro ao importar layout', 'danger'); return; }
+      toast(`Layout "${res.nome}" importado com sucesso!`, 'success');
+      await carregarLayouts();
+      document.getElementById('dp-layout-sel').value = res.id;
+      await selecionarLayoutDepara(res.id);
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models import get_db
+import json
 
 layouts_bp = Blueprint('layouts', __name__)
 
@@ -79,3 +80,74 @@ def excluir(layout_id):
     db.execute("DELETE FROM layouts WHERE id = ?", (layout_id,))
     db.commit()
     return jsonify({'ok': True})
+
+@layouts_bp.route('/<int:layout_id>/exportar', methods=['GET'])
+def exportar(layout_id):
+    db = get_db()
+    layout = db.execute("SELECT * FROM layouts WHERE id = ?", (layout_id,)).fetchone()
+    if not layout:
+        return jsonify({'erro': 'Layout não encontrado'}), 404
+    campos = db.execute(
+        "SELECT * FROM campos_layout WHERE layout_id = ? ORDER BY id", (layout_id,)
+    ).fetchall()
+    exportado = {
+        'nome': layout['nome'],
+        'tipo_arquivo': layout['tipo_arquivo'],
+        'separador_csv': layout['separador_csv'],
+        'linha_inicio': layout['linha_inicio'],
+        'tabela_oracle': layout['tabela_oracle'],
+        'campos': [
+            {
+                'campo_oracle': c['campo_oracle'],
+                'tipo_mapeamento': c['tipo_mapeamento'],
+                'coluna_planilha': c['coluna_planilha'],
+                'valor_fixo': c['valor_fixo'],
+                'mascara_data': c['mascara_data'],
+                'substr_regra': c['substr_regra'],
+                'regex_extrair': c['regex_extrair'],
+                'valor_padrao': c['valor_padrao'],
+            }
+            for c in campos
+        ]
+    }
+    from flask import Response
+    nome_arquivo = layout['nome'].replace(' ', '_').replace('/', '-') + '.json'
+    return Response(
+        json.dumps(exportado, ensure_ascii=False, indent=2),
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename="{nome_arquivo}"'}
+    )
+
+@layouts_bp.route('/importar', methods=['POST'])
+def importar():
+    data = request.get_json()
+    if not data or 'tabela_oracle' not in data or 'campos' not in data:
+        return jsonify({'erro': 'JSON de layout inválido'}), 400
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO layouts (nome, tipo_arquivo, separador_csv, linha_inicio, tabela_oracle)
+           VALUES (:nome, :tipo, :sep, :linha, :tabela)""",
+        {
+            'nome': data.get('nome', 'Layout Importado'),
+            'tipo': data.get('tipo_arquivo', 'xlsx'),
+            'sep': data.get('separador_csv', ','),
+            'linha': data.get('linha_inicio', 2),
+            'tabela': data['tabela_oracle']
+        }
+    )
+    layout_id = cur.lastrowid
+    for campo in data['campos']:
+        db.execute(
+            """INSERT INTO campos_layout
+               (layout_id, campo_oracle, tipo_mapeamento, coluna_planilha, valor_fixo,
+                mascara_data, substr_regra, regex_extrair, valor_padrao)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (layout_id, campo['campo_oracle'], campo['tipo_mapeamento'],
+             campo.get('coluna_planilha'), campo.get('valor_fixo'),
+             campo.get('mascara_data') or None,
+             campo.get('substr_regra') or None,
+             campo.get('regex_extrair') or None,
+             campo.get('valor_padrao') or None)
+        )
+    db.commit()
+    return jsonify({'id': layout_id, 'nome': data.get('nome', 'Layout Importado')}), 201
