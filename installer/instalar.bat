@@ -73,7 +73,7 @@ echo Arquivos do plugin ERP copiados.
 REM Copiar config padrao somente se nao existir
 if not exist "%CONFIG_DIR%\importadorxls_config.json" (
     copy /y "%ORIGEM%importadorxls_config.json" "%CONFIG_DIR%\" >nul
-    echo Arquivo de configuracao criado. Configure a conexao Oracle pelo sistema.
+    echo Arquivo de configuracao criado ^(caminhos Oracle padrao pre-configurados^).
 ) else (
     echo Configuracao existente mantida.
 )

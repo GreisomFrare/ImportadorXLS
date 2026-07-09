@@ -391,12 +391,12 @@
                     <div class="col-md-6">
                       <label class="form-label">Caminho TNSNAMES.ORA</label>
                       <input type="text" id="cfg-tnsnames-path" class="form-control"
-                             placeholder="C:\oracle\network\admin">
+                             placeholder="C:\app\client64\product\19.0.0\client_1\network\admin">
                     </div>
                     <div class="col-md-12">
                       <label class="form-label">Oracle Client BIN</label>
                       <input type="text" id="cfg-oracle-client-bin" class="form-control"
-                             placeholder="C:\oracle\bin">
+                             placeholder="C:\app\client64\product\19.0.0\client_1\bin">
                     </div>
                   </div>
                 </div>
@@ -1157,8 +1157,8 @@
 
         const tns = o.tns || {};
         document.getElementById('cfg-tns-alias').value = tns.alias || '';
-        document.getElementById('cfg-tnsnames-path').value = tns.tnsnames_path || '';
-        document.getElementById('cfg-oracle-client-bin').value = tns.oracle_client_bin || '';
+        document.getElementById('cfg-tnsnames-path').value = tns.tnsnames_path || 'C:\\app\\client64\\product\\19.0.0\\client_1\\network\\admin';
+        document.getElementById('cfg-oracle-client-bin').value = tns.oracle_client_bin || 'C:\\app\\client64\\product\\19.0.0\\client_1\\bin';
       } catch { /* config ainda não existe */ }
     }
 
