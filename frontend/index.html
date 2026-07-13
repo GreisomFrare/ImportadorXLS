@@ -615,6 +615,7 @@
       const fd = new FormData();
       fd.append('layout_id', layoutId);
       fd.append('arquivo', arquivoSelecionado);
+      fd.append('usuario_logado', _userId || '');
 
       document.getElementById('btn-importar').disabled = true;
       document.getElementById('btn-importar').innerHTML =
@@ -871,6 +872,7 @@
               <option value="calculado" ${tipo === 'calculado' ? 'selected' : ''}>Campo calculado</option>
               <option value="sequence" ${tipo === 'sequence' ? 'selected' : ''}>Sequência Oracle</option>
               <option value="arquivo" ${tipo === 'arquivo' ? 'selected' : ''}>Nome do arquivo</option>
+              <option value="usuario" ${tipo === 'usuario' ? 'selected' : ''}>Usuário logado</option>
             </select>
           </td>
           <td class="text-center">${nullCell}</td>
@@ -941,6 +943,12 @@
                 Receberá o nome do arquivo importado automaticamente
               </div>
             </div>
+            <div class="campo-usuario" style="${tipo !== 'usuario' ? 'display:none;' : ''}">
+              <div class="d-flex align-items-center gap-2 text-muted small">
+                <i class="bi bi-person-fill"></i>
+                Receberá o usuário logado no ERP (via window.delphiApp)
+              </div>
+            </div>
           </td>
           ${acoesCell}
         </tr>`;
@@ -1003,6 +1011,7 @@
       tr.querySelector('.campo-calculado').style.display = tipo === 'calculado' ? '' : 'none';
       tr.querySelector('.campo-sequence').style.display = tipo === 'sequence' ? '' : 'none';
       tr.querySelector('.campo-arquivo').style.display = tipo === 'arquivo' ? '' : 'none';
+      tr.querySelector('.campo-usuario').style.display = tipo === 'usuario' ? '' : 'none';
     }
 
     async function salvarLayout() {

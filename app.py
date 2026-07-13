@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from flask import Flask, send_from_directory
 from flask_cors import CORS
@@ -7,7 +8,12 @@ from routes.oracle import oracle_bp
 from routes.layouts import layouts_bp
 from routes.importacao import importacao_bp
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS          # frontend está extraído aqui pelo PyInstaller
+    _CONF_BASE = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    _CONF_BASE = BASE_DIR
 CONFIG_PATH = r'C:\Viasoft\Client\PlugIns\importadorxls_config.json'
 
 def get_port():

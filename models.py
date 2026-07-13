@@ -1,8 +1,17 @@
 import sqlite3
 import os
+import sys
 from flask import g
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'importador.db')
+# Quando frozen (PyInstaller one-file), __file__ aponta para o diretório
+# temporário de extração que muda a cada execução. sys.executable aponta
+# para o EXE real — que é onde o banco deve persistir.
+if getattr(sys, 'frozen', False):
+    _BASE = os.path.dirname(sys.executable)
+else:
+    _BASE = os.path.dirname(os.path.abspath(__file__))
+
+DB_PATH = os.path.join(_BASE, 'importador.db')
 
 def get_db():
     if 'db' not in g:

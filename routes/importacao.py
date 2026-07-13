@@ -229,6 +229,8 @@ def executar():
                     bind[key] = campo.get('valor_fixo')
                 elif tipo_camp == 'arquivo':
                     bind[key] = nome_arquivo
+                elif tipo_camp == 'usuario':
+                    bind[key] = request.form.get('usuario_logado') or None
                 elif tipo_camp == 'calculado':
                     bind[key] = _avaliar_formula(campo.get('valor_fixo') or '', linha)
                 else:
